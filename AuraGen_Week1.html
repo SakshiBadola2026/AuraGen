@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AuraGen - Week 1 Demo</title>
+<title>AuraGen - Self-Healing Generative UI</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f6fc;color:#17233c}
@@ -12,7 +12,9 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f6fc;color:#1
 .logo{width:46px;height:46px;display:grid;place-items:center;border-radius:13px;color:white;font-weight:800;background:linear-gradient(135deg,#315eea,#8a5cf6)}
 h1{margin:0;font-size:21px}.header p{margin:5px 0 0;color:#78849a;font-size:13px}
 .live{margin-left:auto;padding:8px 11px;border-radius:20px;background:#eafaf1;color:#16834b;font-size:11px;font-weight:bold}
+.live.offline{background:#fef2f2;color:#b91c1c}
 .live span{display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#20b66b}
+.live.offline span{background:#ef4444}
 .intro{padding:42px 4px 24px}.eyebrow{color:#5570d9;font-size:11px;font-weight:800;letter-spacing:1.5px}
 h2{margin:8px 0;font-size:clamp(27px,4vw,36px)}.sub{margin:0;color:#77839a;line-height:1.6}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -23,12 +25,14 @@ h2{margin:8px 0;font-size:clamp(27px,4vw,36px)}.sub{margin:0;color:#77839a;line-
 small{color:#8994a8;font-size:11px}
 .progress{height:7px;margin:0 0 10px;overflow:hidden;border-radius:10px;background:#edf0f8}
 .bar{height:100%;width:0;border-radius:10px;background:linear-gradient(90deg,#4169ed,#9664ed);transition:width .2s}
-.panel{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:22px;padding:28px;background:white;border:1px solid #e6ebf4;border-radius:14px}
+.panel{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:22px;padding:28px;background:white;border:1px solid #e6ebf4;border-radius:14px;box-shadow:0 5px 18px #192d5509}
 .panel h3{margin:7px 0;font-size:20px}.panel p:last-child{max-width:590px;margin:0;color:#77839a;font-size:13px;line-height:1.6}
 .actions{display:flex;flex-wrap:wrap;gap:10px}
 button{padding:11px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:bold;font-size:12px}
 .primary{color:white;background:#315eea}.primary:hover{background:#244bd0}
-.secondary{color:#52617b;background:#eef1f7}
+.secondary{color:#52617b;background:#eef1f7}.secondary:hover{background:#e2e7f0}
+#dynamicShell .panel{border-left:4px solid #315eea;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 footer{display:flex;justify-content:space-between;gap:12px;padding:22px 4px 0;color:#929caf;font-size:11px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.panel{align-items:flex-start;flex-direction:column}}
 @media(max-width:480px){.page{width:94%;padding-top:16px}.cards{grid-template-columns:1fr}.live{font-size:9px}footer{flex-direction:column}}
@@ -36,31 +40,185 @@ footer{display:flex;justify-content:space-between;gap:12px;padding:22px 4px 0;co
 </head>
 <body>
 <main class="page">
-<header class="header">
-<div class="logo">AG</div><div><h1>AuraGen</h1><p>Self-Healing Generative UI · Week 1 Demo</p></div>
-<span class="live"><span></span>LIVE DEMO</span>
-</header>
-<section class="intro"><p class="eyebrow">USER INTERACTION MONITOR</p><h2>Telemetry Dashboard</h2>
-<p class="sub">Move your mouse inside the test area and click the button to see your interaction data.</p></section>
-<section class="cards">
-<article class="card"><div class="top"><span>Mouse movements</span><span class="icon">↗</span></div><strong class="value" id="moves">0</strong><small>Movement events detected</small></article>
-<article class="card"><div class="top"><span>Total clicks</span><span class="icon">●</span></div><strong class="value" id="clicks">0</strong><small>Clicks on the test button</small></article>
-<article class="card"><div class="top"><span>Hesitation time</span><span class="icon">◷</span></div><strong class="value"><span id="hesitation">0</span><em> sec</em></strong><small>Time since last test-area activity</small></article>
-<article class="card"><div class="top"><span>Cognitive load score</span><span class="icon">◈</span></div><strong class="value"><span id="score">0</span><em>/100</em></strong><div class="progress"><div class="bar" id="bar"></div></div><small>Simple demo score based on button clicks</small></article>
-</section>
-<section class="panel" id="testArea">
-<div><p class="eyebrow">TRY IT YOURSELF</p><h3>Interaction test area</h3><p>Move your cursor inside this panel. Click the button to increase the click count and demo score.</p></div>
-<div class="actions"><button class="primary" id="testBtn">Test interaction</button><button class="secondary" id="resetBtn">Reset data</button></div>
-</section>
-<footer><span>AuraGen · Week 1 frontend demo</span><span>Runs directly in your browser · No installation needed</span></footer>
+  <header class="header">
+    <div class="logo">AG</div>
+    <div><h1>AuraGen</h1><p>Self-Healing Generative UI · Live Telemetry &amp; Python Backend</p></div>
+    <span class="live offline" id="wsBadge"><span></span><b id="wsText">CONNECTING WS...</b></span>
+  </header>
+
+  <section class="intro">
+    <p class="eyebrow">USER INTERACTION MONITOR</p>
+    <h2>Telemetry Dashboard</h2>
+    <p class="sub">Move your mouse inside the test area, pause for 3 seconds (hesitation), or click rapidly 3+ times to trigger AI UI generation.</p>
+  </section>
+
+  <section class="cards">
+    <article class="card">
+      <div class="top"><span>Mouse movements</span><span class="icon">↗</span></div>
+      <strong class="value" id="moves">0</strong>
+      <small>Velocity: <span id="velocity">0.0</span> px/ms</small>
+    </article>
+    <article class="card">
+      <div class="top"><span>Total clicks</span><span class="icon">●</span></div>
+      <strong class="value" id="clicks">0</strong>
+      <small>Rage bursts: <span id="rageCount">0</span></small>
+    </article>
+    <article class="card">
+      <div class="top"><span>Hesitation time</span><span class="icon">◷</span></div>
+      <strong class="value"><span id="hesitation">0</span><em> sec</em></strong>
+      <small>Time since last test-area activity</small>
+    </article>
+    <article class="card">
+      <div class="top"><span>Cognitive load score</span><span class="icon">◈</span></div>
+      <strong class="value"><span id="score">0</span><em>/100</em></strong>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <small id="aiStatus">Monitoring interaction telemetry</small>
+    </article>
+  </section>
+
+  <section class="panel" id="testArea">
+    <div>
+      <p class="eyebrow">TRY IT YOURSELF</p>
+      <h3>Interaction test area</h3>
+      <p>Move your cursor inside this panel, hesitate for 3+ seconds, or rapidly click the button to trigger a live self-healing UI update below.</p>
+    </div>
+    <div class="actions">
+      <button class="primary" id="testBtn">Test interaction</button>
+      <button class="secondary" id="resetBtn">Reset data</button>
+    </div>
+  </section>
+
+  <!-- AI-Generated HTML appears right here -->
+  <div id="dynamicShell"></div>
+
+  <footer>
+    <span>AuraGen · Connected to FastAPI WebSocket</span>
+    <span>Sanitized HTML Injection · Live AI Generation</span>
+  </footer>
 </main>
+
 <script>
-let moves=0, clicks=0, score=0, lastActivity=Date.now();
-const $=id=>document.getElementById(id);
-$("testArea").addEventListener("mousemove",()=>{moves++;lastActivity=Date.now();$("moves").textContent=moves;});
-$("testBtn").addEventListener("click",()=>{clicks++;score=Math.min(score+5,100);lastActivity=Date.now();$("clicks").textContent=clicks;$("score").textContent=score;$("bar").style.width=score+"%";});
-$("resetBtn").addEventListener("click",()=>{moves=0;clicks=0;score=0;lastActivity=Date.now();$("moves").textContent=0;$("clicks").textContent=0;$("score").textContent=0;$("bar").style.width="0%";$("hesitation").textContent=0;});
-setInterval(()=>{$("hesitation").textContent=Math.floor((Date.now()-lastActivity)/1000);},1000);
+const $ = id => document.getElementById(id);
+
+let moves = 0, clicks = 0, rageBursts = 0, score = 0;
+let lastActivity = Date.now();
+let lastMouse = { x: 0, y: 0, t: Date.now() };
+let clickTimestamps = [];
+let telemetryBuffer = [];
+let hesitationSentForIdle = false;
+
+// Connect to your running Python server on port 8000
+const ws = new WebSocket("ws://127.0.0.1:8000/ws/telemetry");
+
+ws.onopen = () => {
+  $("wsBadge").classList.remove("offline");
+  $("wsText").textContent = "LIVE DEMO · WS CONNECTED";
+};
+
+ws.onclose = () => {
+  $("wsBadge").classList.add("offline");
+  $("wsText").textContent = "WS DISCONNECTED";
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === "RENDER_UI") {
+    $("aiStatus").textContent = "AI Generated: " + data.reason;
+    $("dynamicShell").innerHTML = data.html;
+  }
+};
+
+function updateScore(delta) {
+  score = Math.min(Math.max(score + delta, 0), 100);
+  $("score").textContent = score;
+  $("bar").style.width = score + "%";
+}
+
+function resetAll() {
+  moves = 0; clicks = 0; rageBursts = 0; score = 0;
+  lastActivity = Date.now();
+  hesitationSentForIdle = false;
+  clickTimestamps = [];
+  telemetryBuffer = [];
+  $("moves").textContent = 0;
+  $("velocity").textContent = "0.0";
+  $("clicks").textContent = 0;
+  $("rageCount").textContent = 0;
+  $("hesitation").textContent = 0;
+  $("aiStatus").textContent = "Monitoring interaction telemetry";
+  $("dynamicShell").innerHTML = "";
+  updateScore(-100);
+}
+
+$("testArea").addEventListener("mousemove", (e) => {
+  const now = Date.now();
+  const dt = Math.max(now - lastMouse.t, 1);
+  const dist = Math.hypot(e.clientX - lastMouse.x, e.clientY - lastMouse.y);
+  const vel = +(dist / dt).toFixed(2);
+
+  lastMouse = { x: e.clientX, y: e.clientY, t: now };
+  lastActivity = now;
+  hesitationSentForIdle = false;
+  moves++;
+
+  $("moves").textContent = moves;
+  $("velocity").textContent = vel;
+  telemetryBuffer.push({ type: "move", velocity: vel, t: now });
+});
+
+$("testBtn").addEventListener("click", () => {
+  const now = Date.now();
+  clicks++;
+  lastActivity = now;
+  hesitationSentForIdle = false;
+  $("clicks").textContent = clicks;
+  updateScore(5);
+
+  clickTimestamps.push(now);
+  clickTimestamps = clickTimestamps.filter(t => now - t < 1000);
+
+  if (clickTimestamps.length >= 3) {
+    rageBursts++;
+    $("rageCount").textContent = rageBursts;
+    updateScore(25);
+    telemetryBuffer.push({ type: "rage_click", count: clickTimestamps.length, score, t: now });
+    clickTimestamps = [];
+  } else {
+    telemetryBuffer.push({ type: "click", score, t: now });
+  }
+});
+
+$("resetBtn").addEventListener("click", resetAll);
+
+// Handles clicks on the AI-generated buttons inside #dynamicShell
+$("dynamicShell").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const action = btn.getAttribute("data-action");
+  if (action === "reset") {
+    resetAll();
+  } else if (action === "acknowledge") {
+    $("dynamicShell").innerHTML = "";
+    $("aiStatus").textContent = "Dismissed · Monitoring telemetry";
+  }
+});
+
+// Send telemetry & check for 3-second hesitation every 1 second
+setInterval(() => {
+  const idleSec = Math.floor((Date.now() - lastActivity) / 1000);
+  $("hesitation").textContent = idleSec;
+
+  if (idleSec >= 3 && moves > 0 && !hesitationSentForIdle) {
+    hesitationSentForIdle = true;
+    updateScore(15);
+    telemetryBuffer.push({ type: "hesitation", idleSeconds: idleSec, score, t: Date.now() });
+  }
+
+  if (ws.readyState === WebSocket.OPEN && telemetryBuffer.length > 0) {
+    ws.send(JSON.stringify({ events: telemetryBuffer, cognitiveScore: score }));
+    telemetryBuffer = [];
+  }
+}, 1000);
 </script>
 </body>
 </html>
