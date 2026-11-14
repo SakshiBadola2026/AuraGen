@@ -57,7 +57,7 @@ async def telemetry_ws(ws: WebSocket):
                 print(f"Generating UI for: {trigger}...")
 
                 response = await client.aio.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=f"User behavior: {trigger}. Cognitive load score: {score}/100.",
                     config=types.GenerateContentConfig(
                         system_instruction=SYSTEM_PROMPT,
