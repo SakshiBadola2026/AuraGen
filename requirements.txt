@@ -1,4 +1,4 @@
-fastapi
-uvicorn
-websockets
-google-genai
+fastapi==0.165.0
+uvicorn==0.54.0
+websockets==17.4
+google-genai==3.6.1
