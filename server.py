@@ -6,6 +6,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from google import genai
@@ -14,6 +15,7 @@ from google.genai import types
 
 app = FastAPI(title="AuraGen — Self-Healing Insurance Proposal Demo")
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / "env.env")
 MODEL = "gemini-3.8-flash"
 FORM_ID = "insurance-proposal-v1"
 UI_CACHE: dict[str, str] = {}
