@@ -22,7 +22,10 @@ returns a Gemini-generated wizard shell over WebSockets.
 
 ## Run locally (Windows PowerShell)
 
-From the project directory:
+For the quickest launch, double-click `run.bat`. It creates `.venv` if needed,
+installs the requirements, and starts the app at `http://127.0.0.1:8765/`.
+
+Alternatively, from the project directory in PowerShell:
 
 ```powershell
 py -m venv .venv
