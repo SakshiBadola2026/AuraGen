@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import os
@@ -19,6 +20,84 @@ load_dotenv(BASE_DIR / "env.env")
 MODEL = "gemini-3.8-flash"
 FORM_ID = "insurance-proposal-v1"
 UI_CACHE: dict[str, str] = {}
+FIELD_GUIDE_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _fallback_field_guide(field_name: str, field_label: str) -> dict[str, str]:
+    defaults = {
+        "policyType": ("Category of insurance protection requested.", "Select Health for medical coverage, Life for family protection, or Motor for vehicle."),
+        "sumInsured": ("Maximum coverage amount paid out during a valid claim.", "Choose ₹10,00,000 for standard family coverage, or ₹25,00,000+ for higher medical security."),
+        "tenure": ("Active duration of the insurance contract.", "Choose 3 Years for locked-in discount pricing, or 1 Year for annual review."),
+        "startDate": ("Effective date when insurance protection begins.", "Select today's date or an upcoming date within the next 30 days."),
+        "frequency": ("Billing cycle for premium payments.", "Select 'Annual' to waive installment fees (saves ~8%), or 'Monthly' for easier cashflow."),
+        "fullName": ("Legal name of the primary policyholder.", "Type your full name exactly as printed on your government Aadhaar or PAN card."),
+        "dob": ("Official date of birth.", "Must match your official ID. Primary policyholders must be at least 18 years old."),
+        "gender": ("Legal gender as per official identification records.", "Select Male, Female, or Other for accurate actuarial life underwriting."),
+        "maritalStatus": ("Current marital status.", "Select Single, Married, or Divorced. Required for family floater benefits."),
+        "nationality": ("Country of legal citizenship.", "Default is 'Indian'. If foreign national, specify country of passport citizenship."),
+        "tobacco": ("Habitual or occasional tobacco or alcohol usage.", "Declare truthfully. Honest disclosure ensures hassle-free claim settlement."),
+        "occupation": ("Primary profession or employment category.", "Select 'Salaried' for payroll jobs, or 'Self-Employed' for business owners/freelancers."),
+        "income": ("Gross annual household income bracket.", "Select income range matching your recent tax return (ITR) or salary slips."),
+        "employer": ("Name of current employer or business entity.", "Optional. Type your organization's name or leave blank if self-employed/retired."),
+        "medical": ("Pre-existing health conditions or chronic illnesses.", "Mention any conditions like diabetes, BP, or asthma. Write 'None' if completely healthy."),
+        "email": ("Primary digital email address.", "Enter your active email where digital policy bonds and tax receipts will be emailed."),
+        "phone": ("10-digit mobile contact number.", "Enter active mobile number to receive verification OTPs and claim status alerts."),
+        "address": ("Permanent or primary residential address.", "Enter house/flat number, building name, and street locality for documentation."),
+        "cityState": ("City and Indian state of residence.", "Enter city and state (e.g., 'Dehradun, Uttarakhand' or 'Bangalore, Karnataka')."),
+        "pincode": ("6-digit postal index code.", "Enter valid 6-digit postal PIN code of your area (e.g., 248001)."),
+        "idType": ("Official government identification document.", "Select PAN Card (preferred for financial verification) or Aadhaar Card."),
+        "idNumber": ("Unique document identification number.", "Enter 10-character alphanumeric PAN (e.g. ABCDE1234F) or 12-digit Aadhaar number."),
+        "nomineeName": ("Primary beneficiary who receives claim proceeds.", "Enter full legal name of your nominated family member (e.g. spouse, child, or parent)."),
+        "nomineeRelation": ("Legal relationship of nominee to policyholder.", "Select Spouse, Parent, Child, or Sibling from the dropdown."),
+        "prevPolicy": ("Previous insurance policy number (if renewing or porting).", "Optional. Enter if transferring your accumulated No Claim Bonus (NCB) discount."),
+        "agree": ("Legal declaration of proposal accuracy.", "Check this box to confirm all provided information is complete and accurate."),
+    }
+    what, how = defaults.get(field_name, (f"Information required for {field_label}.", f"Enter valid details for {field_label}."))
+    return {"what": what, "how": how}
+
+
+async def _generate_field_guidance(field_name: str, field_label: str) -> dict[str, str]:
+    if field_name in FIELD_GUIDE_CACHE:
+        return FIELD_GUIDE_CACHE[field_name]
+
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        fallback = _fallback_field_guide(field_name, field_label)
+        FIELD_GUIDE_CACHE[field_name] = fallback
+        return fallback
+
+    client = genai.Client(api_key=api_key)
+    prompt = (
+        f"You are an expert AI form assistant for an insurance proposal. A user is filling out the form and just clicked on field '{field_label}' (key: '{field_name}').\n"
+        "Provide very short, clear instructions in pure JSON format with exactly two keys:\n"
+        "- 'what': what this field is (under 12 words)\n"
+        "- 'how': exactly how to fill it out (under 18 words, practical actionable guidance)\n"
+        "Return pure valid JSON only."
+    )
+    try:
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.2,
+                ),
+            ),
+            timeout=5.0,
+        )
+        raw = response.text.strip()
+        data = json.loads(raw)
+        if "what" in data and "how" in data:
+            guide = {"what": str(data["what"]), "how": str(data["how"])}
+            FIELD_GUIDE_CACHE[field_name] = guide
+            return guide
+    except Exception as exc:
+        print(f"Gemini field guidance fallback for {field_name}: {exc}")
+
+    fallback = _fallback_field_guide(field_name, field_label)
+    FIELD_GUIDE_CACHE[field_name] = fallback
+    return fallback
 
 
 def _select(
@@ -228,9 +307,9 @@ async def _generate_html(trigger: str, score: int, context: dict[str, str]) -> t
     if key in UI_CACHE:
         return UI_CACHE[key], "CACHE_HIT"
 
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
+        raise RuntimeError("GEMINI_API_KEY or GOOGLE_API_KEY is not set")
 
     client = genai.Client(api_key=api_key)
     prompt = (
@@ -271,6 +350,15 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/field-guidance")
+async def get_field_guidance(name: str, label: str = "") -> dict[str, Any]:
+    started = time.perf_counter()
+    guide = await _generate_field_guidance(name, label or name)
+    latency = round((time.perf_counter() - started) * 1000, 2)
+    source = "CACHE" if latency < 15 else "GEMINI_LIVE"
+    return {"status": "ok", "fieldName": name, "source": source, "latencyMs": latency, **guide}
+
+
 @app.websocket("/ws/telemetry")
 async def telemetry_ws(ws: WebSocket) -> None:
     await ws.accept()
@@ -280,6 +368,22 @@ async def telemetry_ws(ws: WebSocket) -> None:
                 payload: Any = json.loads(await ws.receive_text())
                 if not isinstance(payload, dict):
                     raise ValueError("Payload must be a JSON object")
+                if payload.get("type") == "FIELD_GUIDANCE_REQUEST":
+                    field_name = str(payload.get("fieldName", "")).strip()
+                    field_label = str(payload.get("fieldLabel", field_name)).strip()
+                    started = time.perf_counter()
+                    guide = await _generate_field_guidance(field_name, field_label)
+                    latency = round((time.perf_counter() - started) * 1000, 2)
+                    source = "CACHE" if latency < 15 else "GEMINI_LIVE"
+                    await ws.send_json({
+                        "type": "FIELD_GUIDANCE_RESPONSE",
+                        "fieldName": field_name,
+                        "what": guide.get("what", ""),
+                        "how": guide.get("how", ""),
+                        "latencyMs": latency,
+                        "source": source,
+                    })
+                    continue
                 events = payload.get("events", [])
                 if not isinstance(events, list):
                     raise ValueError("events must be a list")
