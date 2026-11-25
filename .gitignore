@@ -2,12 +2,18 @@
 __pycache__/
 *.py[cod]
 
+# Secrets and environment files
 .env
 .env.*
-!.env.example
 env.env
+*.env
+!.env.example
 secrets/
 *.pem
 *.key
 credentials.json
 service-account*.json
+
+# Data and logs
+data/
+*.log
