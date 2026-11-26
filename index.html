@@ -1555,57 +1555,80 @@
       submitProposalData();
     }
 
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = window.location.host || "127.0.0.1:8765";
-      ws = new WebSocket(`${protocol}//${host}/ws/telemetry`);
-      ws.onopen = () => {
-        $("wsBadge").textContent = "Assistant Ready";
-        $("wsBadge").className = "pill ws-on";
-        log("Assistant connected.");
-      };
-      ws.onmessage = event => {
-        let response;
-        try { response = JSON.parse(event.data); }
-        catch { if (isTransitioning) renderSimplified(createBackupShell(), "Invalid response", "CLIENT_SAFE_FALLBACK"); return; }
+    let wsHeartbeat = null;
+    let wsReconnectTimer = null;
+    let wasConnectedOnce = false;
 
-        if (response.type === "FIELD_GUIDANCE_RESPONSE") {
-          const guide = response.guide || response.what;
-          const example = response.example || response.how;
-          clientFieldCache.set(response.fieldName, { guide, example });
-          if (currentActiveFieldName === response.fieldName) {
-            const activeEl = document.getElementById(`copilot-${response.fieldName}`);
-            const sidebarEl = $("sidebarFieldGuide");
-            const label = activeEl ? activeEl.dataset.label : (sidebarEl?.dataset.label || response.fieldName);
-            if (activeEl) renderCopilotContent(activeEl, label, guide, example);
-            else syncSidebarGuide(label, guide, example);
+    function connectWebSocket() {
+      if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = window.location.host || "127.0.0.1:8765";
+        ws = new WebSocket(`${protocol}//${host}/ws/telemetry`);
+        ws.onopen = () => {
+          $("wsBadge").textContent = "Assistant Ready";
+          $("wsBadge").className = "pill ws-on";
+          if (!wasConnectedOnce) {
+            log("Assistant connected.");
+            wasConnectedOnce = true;
           }
-          log(`Loaded guidance for ${response.fieldName}.`);
-          return;
-        }
-        if (response.type === "RENDER_UI") {
-          clearTimeout(pendingTimer);
-          pendingWizardMarkup = response.html;
-          pendingWizardReason = response.reason || "Assistance requested";
-          pendingWizardSource = response.source || "BACKEND";
-          if (isWaitingUserAcceptance) {
-            log("Guided step view ready.");
-          } else if (isTransitioning) {
-            renderSimplified(response.html, pendingWizardReason, pendingWizardSource);
+          if (wsHeartbeat) clearInterval(wsHeartbeat);
+          wsHeartbeat = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "PING" }));
+            }
+          }, 20000);
+        };
+        ws.onmessage = event => {
+          let response;
+          try { response = JSON.parse(event.data); }
+          catch { if (isTransitioning) renderSimplified(createBackupShell(), "Invalid response", "CLIENT_SAFE_FALLBACK"); return; }
+
+          if (response.type === "PONG") return;
+
+          if (response.type === "FIELD_GUIDANCE_RESPONSE") {
+            const guide = response.guide || response.what;
+            const example = response.example || response.how;
+            clientFieldCache.set(response.fieldName, { guide, example });
+            if (currentActiveFieldName === response.fieldName) {
+              const activeEl = document.getElementById(`copilot-${response.fieldName}`);
+              const sidebarEl = $("sidebarFieldGuide");
+              const label = activeEl ? activeEl.dataset.label : (sidebarEl?.dataset.label || response.fieldName);
+              if (activeEl) renderCopilotContent(activeEl, label, guide, example);
+              else syncSidebarGuide(label, guide, example);
+            }
+            log(`Loaded guidance for ${response.fieldName}.`);
+            return;
           }
-        } else if (response.type === "ERROR") {
-          clearTimeout(pendingTimer);
-          if (isTransitioning) renderSimplified(createBackupShell(), "Fallback layout", "CLIENT_SAFE_FALLBACK");
-        }
-      };
-      ws.onerror = () => log("Using standard connection mode.");
-      ws.onclose = () => {
+          if (response.type === "RENDER_UI") {
+            clearTimeout(pendingTimer);
+            pendingWizardMarkup = response.html;
+            pendingWizardReason = response.reason || "Assistance requested";
+            pendingWizardSource = response.source || "BACKEND";
+            if (isWaitingUserAcceptance) {
+              log("Guided step view ready.");
+            } else if (isTransitioning) {
+              renderSimplified(response.html, pendingWizardReason, pendingWizardSource);
+            }
+          } else if (response.type === "ERROR") {
+            clearTimeout(pendingTimer);
+            if (isTransitioning) renderSimplified(createBackupShell(), "Fallback layout", "CLIENT_SAFE_FALLBACK");
+          }
+        };
+        ws.onerror = () => {};
+        ws.onclose = () => {
+          if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
+          $("wsBadge").textContent = "Offline Mode";
+          $("wsBadge").className = "pill ws-off";
+          wsReconnectTimer = setTimeout(connectWebSocket, 3000);
+        };
+      } catch {
         $("wsBadge").textContent = "Offline Mode";
         $("wsBadge").className = "pill ws-off";
-      };
-    } catch {
-      log("Offline mode active.");
+        wsReconnectTimer = setTimeout(connectWebSocket, 3000);
+      }
     }
+    connectWebSocket();
 
     function showFieldCopilotFromControl(control) {
       if (!control || isSimplified || isTransitioning) return;

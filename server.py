@@ -534,6 +534,10 @@ async def telemetry_ws(ws: WebSocket) -> None:
                 if not isinstance(payload, dict):
                     continue
 
+                if payload.get("type") == "PING":
+                    await ws.send_json({"type": "PONG"})
+                    continue
+
                 if payload.get("type") == "FIELD_GUIDANCE_REQUEST":
                     field_name = str(payload.get("fieldName", "")).strip()
                     field_label = str(payload.get("fieldLabel", FORM_FIELDS.get(field_name, field_name))).strip()
