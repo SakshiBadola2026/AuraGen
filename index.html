@@ -1129,7 +1129,7 @@
 
     function activateFieldCopilot(control, fieldName, fieldLabel) {
       if (!control) return;
-      if (currentActiveFieldName === fieldName && document.getElementById(`copilot-${fieldName}`)) {
+      if (currentActiveFieldName === fieldName && (control.tagName === "SELECT" || document.getElementById(`copilot-${fieldName}`))) {
         return;
       }
       currentActiveFieldName = fieldName;
@@ -1575,9 +1575,10 @@
           clientFieldCache.set(response.fieldName, { guide, example });
           if (currentActiveFieldName === response.fieldName) {
             const activeEl = document.getElementById(`copilot-${response.fieldName}`);
-            const label = activeEl ? activeEl.dataset.label : response.fieldName;
-            if (activeEl) renderCopilotContent(activeEl, label, guide, example, response.source);
-            else syncSidebarGuide(label, guide, example, response.source);
+            const sidebarEl = $("sidebarFieldGuide");
+            const label = activeEl ? activeEl.dataset.label : (sidebarEl?.dataset.label || response.fieldName);
+            if (activeEl) renderCopilotContent(activeEl, label, guide, example);
+            else syncSidebarGuide(label, guide, example);
           }
           log(`Loaded guidance for ${response.fieldName}.`);
           return;
@@ -1621,11 +1622,13 @@
     formArea.addEventListener("mousemove", event => {
       if (isSimplified || isTransitioning) return;
       moves++;
+      let movedDist = 0;
       const now = performance.now();
       if (lastMousePos && lastMouseTime) {
         const dt = (now - lastMouseTime) / 1000;
+        movedDist = Math.hypot(event.clientX - lastMousePos.x, event.clientY - lastMousePos.y);
         if (dt > 0.01) {
-          cursorVelocity = Math.round(Math.hypot(event.clientX - lastMousePos.x, event.clientY - lastMousePos.y) / dt);
+          cursorVelocity = Math.round(movedDist / dt);
           if (cursorVelocity > 1400) setScore(Math.max(score, 75));
         }
       }
@@ -1633,7 +1636,7 @@
       lastMouseTime = now;
       $("mMoves").textContent = `${cursorVelocity} px/s`;
       updateCognitiveScore();
-      if (hasInteracted) { lastActivityTime = Date.now(); hesitationTriggered = false; }
+      if (hasInteracted && movedDist > 15) { lastActivityTime = Date.now(); hesitationTriggered = false; }
     });
 
     formArea.addEventListener("click", event => {
@@ -1781,10 +1784,10 @@
     });
 
     setInterval(() => {
-      if (isSimplified || isTransitioning || !hasInteracted) return;
+      if (isSimplified || isTransitioning) return;
       const idleSeconds = Math.floor((Date.now() - lastActivityTime) / 1000);
       $("mIdle").textContent = `${idleSeconds} sec`;
-      if (idleSeconds >= 3 && !hesitationTriggered) {
+      if (hasInteracted && idleSeconds >= 3 && !hesitationTriggered) {
         hesitationTriggered = true;
         setScore(Math.max(score, 70));
         triggerFriction("hesitation", "3-second pause during entry");
