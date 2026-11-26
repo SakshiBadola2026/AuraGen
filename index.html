@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AuraGen — Self-Healing Proposal Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f4f6f9;
@@ -33,101 +36,112 @@
 
     body {
       margin: 0;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "Plus Jakarta Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: var(--ink);
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 8% -5%, rgba(79, 70, 229, .14), transparent 38%),
+        radial-gradient(circle at 92% 0%, rgba(16, 185, 129, .12), transparent 36%),
+        #eef2f8;
       -webkit-font-smoothing: antialiased;
       line-height: 1.5;
     }
 
     .page {
-      max-width: 1240px;
+      max-width: 1260px;
       margin: 0 auto;
-      padding: 20px 24px 64px;
+      padding: 22px 24px 64px;
     }
 
-    /* Top Bar */
+    /* Bright Indigo-Mint Glass Header */
     .topbar {
+      position: relative;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 16px 22px;
-      margin-bottom: 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      padding: 20px 26px;
+      margin-bottom: 16px;
+      background:
+        radial-gradient(circle at 88% 15%, rgba(16, 185, 129, .14), transparent 42%),
+        radial-gradient(circle at 12% 85%, rgba(79, 70, 229, .14), transparent 45%),
+        linear-gradient(135deg, #eef2ff 0%, #ffffff 55%, #ecfdf5 100%);
+      border: 1px solid #dbe4f3;
+      border-radius: 18px;
+      box-shadow: 0 10px 28px rgba(79, 70, 229, .08), 0 2px 6px rgba(15, 23, 42, .04);
+      color: var(--ink);
     }
-    .brand { display: flex; align-items: center; gap: 14px; }
+    .topbar::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #059669);
+    }
+    .brand { display: flex; align-items: center; gap: 15px; }
     .logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: #0f172a;
+      width: 48px;
+      height: 48px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #4f46e5, #059669);
       color: #ffffff;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      box-shadow: 0 8px 18px rgba(79, 70, 229, .30);
       display: grid;
       place-items: center;
       flex-shrink: 0;
     }
     .brand h1 {
       margin: 0;
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
       color: var(--ink);
     }
     .brand p {
       margin: 2px 0 0;
-      font-size: 12.5px;
-      color: var(--muted);
+      font-size: 13px;
+      color: var(--ink-2);
     }
     .badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 11px;
+      gap: 7px;
+      padding: 6px 13px;
       border-radius: 999px;
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 600;
       letter-spacing: 0.2px;
-      border: 1px solid var(--border);
+      border: 1px solid transparent;
     }
     .pill::before {
       content: "";
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: currentColor;
     }
-    .mode-full { background: var(--accent-soft); color: var(--accent); border-color: #c7d2fe; }
-    .mode-simple { background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-border); }
-    .ws-on { background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-border); }
-    .ws-off { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
-
-    /* Trust + Simulation Strip */
-    .subbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 16px;
-      margin-bottom: 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 12px;
-      color: var(--muted);
-      flex-wrap: wrap;
-    }
-    .trust-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      color: var(--ink-2);
+    .mode-full { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .mode-simple { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .ws-on { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .ws-off { background: #ffe4e6; color: #be123c; border-color: #fecdd3; }
+    .demo-trigger-btn {
+      padding: 6px 13px;
+      border-radius: 999px;
+      font-size: 11.5px;
       font-weight: 600;
+      color: var(--ink-2);
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
     }
+    .demo-trigger-btn:hover { background: #f8fafc; border-color: var(--accent); color: var(--accent); }
 
     .eval-panel {
       margin-bottom: 18px;
@@ -184,13 +198,20 @@
     button:active { transform: translateY(1px); }
     button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .btn-primary {
-      background: var(--accent);
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
       color: #ffffff;
-      box-shadow: 0 1px 2px rgba(79, 70, 229, .25);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, .28);
     }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-success { background: var(--emerald); color: #ffffff; }
-    .btn-success:hover { background: #047857; }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4338ca, #3730a3);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, .34);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, .25);
+    }
+    .btn-success:hover { background: linear-gradient(135deg, #059669, #047857); }
     .btn-ghost {
       background: var(--surface);
       color: var(--ink-2);
@@ -206,16 +227,37 @@
     .metrics {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 14px;
       margin-bottom: 20px;
     }
     .metric {
-      padding: 14px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 15px 17px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+      transition: transform .15s, box-shadow .15s;
     }
+    .metric:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .07);
+    }
+    .metric-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .mi-indigo { background: #eef2ff; color: #4f46e5; }
+    .mi-sky { background: #e0f2fe; color: #0284c7; }
+    .mi-amber { background: #fef3c7; color: #d97706; }
+    .mi-emerald { background: #d1fae5; color: #059669; }
+    .metric-info { flex: 1; min-width: 0; }
     .metric small {
       display: block;
       margin-bottom: 4px;
@@ -282,56 +324,99 @@
       font-size: 13px;
     }
 
+    /* Section Nav Strip */
+    .section-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 8px;
+      background: #f1f5f9;
+      border-radius: 12px;
+    }
+    .sec-pill {
+      flex: 1 1 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-2);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .sec-pill:hover { background: rgba(255, 255, 255, .75); color: var(--ink); }
+    .sec-pill.active {
+      background: #ffffff;
+      color: var(--accent);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, .07);
+    }
+
     /* Form Sections */
     .form-section {
-      margin-bottom: 18px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fcfdff;
+      margin-bottom: 20px;
+      padding: 22px;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, .03);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .form-section:focus-within {
+      border-color: #818cf8;
+      box-shadow: 0 10px 28px rgba(79, 70, 229, .10);
     }
     .form-section h3 {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin: 0 0 16px;
-      font-size: 14.5px;
+      gap: 11px;
+      margin: 0 0 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 15.5px;
       font-weight: 700;
       color: var(--ink);
     }
     .section-index {
       display: grid;
       place-items: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 6px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 11px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4f46e5, #059669);
+      color: #ffffff;
+      font-size: 11.5px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, .24);
     }
-    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
     .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .form-grid + .form-grid { margin-top: 14px; }
-    .field { display: flex; flex-direction: column; gap: 5px; position: relative; }
+    .form-grid + .form-grid { margin-top: 15px; }
+    .field { display: flex; flex-direction: column; gap: 6px; position: relative; }
     .field.full { grid-column: 1 / -1; }
     label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
     .required-mark { color: var(--danger); }
 
     input, select {
       width: 100%;
-      height: 40px;
-      padding: 8px 12px;
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      background: #ffffff;
+      height: 41px;
+      padding: 8px 13px;
+      border: 1.5px solid #dbe2ec;
+      border-radius: 10px;
+      background: #f8fafc;
       font-family: inherit;
       font-size: 13px;
       color: var(--ink);
       outline: 0;
-      transition: border-color .15s, box-shadow .15s;
+      transition: background .15s, border-color .15s, box-shadow .15s;
     }
+    input:hover, select:hover { border-color: #cbd5e1; background: #ffffff; }
     select {
       appearance: none;
       padding-right: 34px;
@@ -341,8 +426,9 @@
       background-position: right 10px center;
     }
     input:focus, select:focus {
+      background: #ffffff;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, .14);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .15);
     }
 
     .consent-row {
@@ -379,16 +465,28 @@
       background: #f8faff;
       animation: slideDown .16s ease-out;
     }
+    .active-field-copilot.above-select {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: calc(100% + 6px);
+      margin-top: 0;
+      z-index: 60;
+      background: #ffffff;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .16), 0 0 0 1px rgba(79, 70, 229, .18);
+    }
     .sidebar-copilot {
-      margin-bottom: 16px;
-      padding: 14px 16px;
+      margin-bottom: 18px;
+      padding: 15px 16px;
       border: 1px solid #c7d2fe;
+      border-left: 4px solid #4f46e5;
       border-radius: 12px;
-      background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+      background: linear-gradient(145deg, #eef2ff 0%, #ffffff 65%);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, .08);
     }
     .sidebar-copilot-empty {
       font-size: 12.5px;
-      color: var(--muted);
+      color: var(--ink-2);
       padding: 4px 0;
     }
     .copilot-header {
@@ -423,16 +521,16 @@
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-size: 12.5px;
       line-height: 1.45;
     }
     .copilot-row:last-child { margin-bottom: 0; }
     .copilot-row.example {
-      background: #ffffff;
-      padding: 6px 10px;
-      border-radius: 7px;
-      border: 1px solid var(--border);
+      background: var(--emerald-soft);
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--emerald-border);
       align-items: center;
     }
     .copilot-badge-tip, .copilot-badge-example {
@@ -506,29 +604,30 @@
       margin: 0 0 8px;
     }
     .log-box {
-      height: 300px;
+      height: 230px;
       overflow-y: auto;
       padding: 12px 14px;
-      border-radius: 10px;
-      background: #0b1120;
-      color: #cbd5e1;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 11px;
-      line-height: 1.55;
+      border-radius: 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 12px;
+      line-height: 1.5;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, .25);
     }
     .log-box div {
-      padding: 5px 0 5px 12px;
+      padding: 6px 0 6px 14px;
       position: relative;
-      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      border-bottom: 1px solid rgba(255, 255, 255, .07);
       overflow-wrap: anywhere;
     }
+    .log-box div:last-child { border-bottom: 0; }
     .log-box div::before {
       content: "";
       position: absolute;
       left: 0;
-      top: 11px;
-      width: 5px;
-      height: 5px;
+      top: 12px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #10b981;
     }
@@ -647,42 +746,23 @@
   <main class="page">
     <header class="topbar">
       <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
-            <path d="m9 12 2 2 4-4"/>
-          </svg>
-        </div>
+        <div class="logo" aria-hidden="true">AG</div>
         <div>
-          <h1>AuraGen Underwriting Portal</h1>
-          <p>Adaptive proposal experience powered by Gemini AI</p>
+          <h1>AuraGen</h1>
+          <p>Guided insurance proposal application</p>
         </div>
       </div>
       <div class="badges">
-        <span class="pill mode-full" id="modeBadge">Standard Portal</span>
+        <span class="pill mode-full" id="modeBadge">Full Form</span>
         <span class="pill ws-off" id="wsBadge">Connecting...</span>
       </div>
     </header>
 
-    <div class="subbar">
-      <div class="trust-pill">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.4">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        <span>Browser-Isolated Demo · Zero PII Sent to Gemini</span>
-      </div>
-      <span>Click any field or dropdown to view live Gemini AI guidance in the right panel.</span>
-    </div>
-
-    <section class="eval-panel" aria-label="Simulation Controls">
-      <div class="eval-header" id="evalToggle">
-        <span class="eval-title">Simulation &amp; Demo Controls</span>
-        <span class="eval-hint">Click to toggle</span>
-      </div>
-      <div class="eval-body" id="evalBody">
+    <section class="eval-panel" id="evalBody" hidden aria-label="Demo Controls">
+      <div class="eval-body" style="margin-top:0;padding-top:0;border-top:0;">
         <label style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);font-weight:600;cursor:pointer;">
           <input type="checkbox" id="chkUsePopup" checked style="width:15px;height:15px;margin:0;cursor:pointer;accent-color:var(--accent);">
-          Prompt before switching to Guided Wizard
+          Confirm before switching to Guided Steps
         </label>
         <div class="btn-group">
           <button type="button" class="btn-warn" id="btnHesitate">Simulate Confusion (3s Pause)</button>
@@ -693,14 +773,34 @@
       </div>
     </section>
 
-    <section class="metrics" aria-label="Live Telemetry">
-      <div class="metric"><small>Cursor Velocity</small><strong id="mMoves">0 px/s</strong></div>
-      <div class="metric"><small>Interactions</small><strong id="mClicks">0</strong></div>
-      <div class="metric"><small>Idle Duration</small><strong id="mIdle">0 sec</strong></div>
+    <section class="metrics" aria-label="Session Overview">
       <div class="metric">
-        <small>Cognitive Load</small><strong id="mScore">0 / 100</strong>
-        <div class="bar-wrap" role="progressbar" aria-label="Cognitive load" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div class="bar-fill" id="scoreBar"></div>
+        <div class="metric-icon mi-indigo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="metric-info"><small>Pointer Speed</small><strong id="mMoves">0 px/s</strong></div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon mi-sky" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </div>
+        <div class="metric-info"><small>Form Interactions</small><strong id="mClicks">0</strong></div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon mi-amber" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="metric-info"><small>Idle Time</small><strong id="mIdle">0 sec</strong></div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon mi-emerald" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="metric-info">
+          <small>Effort Index</small><strong id="mScore">0 / 100</strong>
+          <div class="bar-wrap" role="progressbar" aria-label="Effort index" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="bar-fill" id="scoreBar"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -708,9 +808,17 @@
     <div class="main-grid">
       <section class="card" id="workspaceCard" aria-labelledby="formTitle">
         <div id="complexView">
-          <p class="eyebrow">Proposal Application</p>
-          <h2 id="formTitle">Insurance Underwriting Form</h2>
-          <p class="desc">Complete the 5 sections below. AuraGen adapts into a guided step-by-step wizard if friction is detected.</p>
+          <p class="eyebrow">Insurance Application</p>
+          <h2 id="formTitle">Proposal &amp; Underwriting Form</h2>
+          <p class="desc">Complete the five sections below to receive your preliminary quote.</p>
+
+          <nav class="section-nav" id="sectionNav" aria-label="Application sections">
+            <button type="button" class="sec-pill active" data-jump="policy">01 Policy</button>
+            <button type="button" class="sec-pill" data-jump="personal">02 Personal</button>
+            <button type="button" class="sec-pill" data-jump="employment">03 Employment</button>
+            <button type="button" class="sec-pill" data-jump="contact">04 Contact</button>
+            <button type="button" class="sec-pill" data-jump="kyc">05 KYC &amp; Nominee</button>
+          </nav>
 
           <form id="proposalForm">
             <div id="formArea">
@@ -720,7 +828,7 @@
                   <div class="field">
                     <label for="policyType">Insurance Type <span class="required-mark">*</span></label>
                     <select id="policyType" name="policyType" data-field="policyType" required>
-                      <option value="">-- Select Plan --</option><option selected>Health Insurance</option><option>Life Insurance</option><option>Motor Insurance</option><option>Home Insurance</option>
+                      <option value="">Select Plan</option><option selected>Health Insurance</option><option>Life Insurance</option><option>Motor Insurance</option><option>Home Insurance</option>
                     </select>
                   </div>
                   <div class="field">
@@ -863,8 +971,7 @@
               </section>
             </div>
             <div class="form-footer">
-              <button id="btnSubmit" type="submit" class="btn-primary">Submit &amp; Run AI Underwriting</button>
-              <span class="hint">Gemini evaluates anonymized risk attributes in real time.</span>
+              <button id="btnSubmit" type="submit" class="btn-primary">Submit</button>
             </div>
           </form>
         </div>
@@ -874,19 +981,13 @@
       </section>
 
       <aside class="card telemetry-card" aria-labelledby="telemetryTitle">
-        <p class="eyebrow">AI Assistant &amp; Telemetry</p>
-        <h2 id="telemetryTitle">Gemini Field Copilot</h2>
-        <p class="desc">Always-visible live guidance for your active field or dropdown.</p>
+        <h2 id="telemetryTitle" style="margin-bottom:12px;">Field Assistance</h2>
 
         <div id="sidebarFieldGuide" class="sidebar-copilot">
-          <div class="copilot-header">
-            <span class="copilot-badge">Gemini Field Guide</span>
-            <span class="copilot-tag">Ready</span>
-          </div>
-          <div class="sidebar-copilot-empty">Click or focus any field or dropdown to fetch live Gemini guidance.</div>
+          <div class="sidebar-copilot-empty">Select any field to see a helpful tip and example.</div>
         </div>
 
-        <p class="log-label">Engine Activity Log</p>
+        <p class="log-label">Session Activity</p>
         <div class="log-box" id="logBox" role="log" aria-live="polite" aria-relevant="additions"></div>
       </aside>
     </div>
@@ -895,28 +996,32 @@
     <div id="assistModal" class="assist-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="assistTitle">
       <div class="assist-modal">
         <div class="assist-header">
-          <div class="assist-icon-pulse" aria-hidden="true">AI</div>
+          <div class="assist-icon-pulse" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+              <path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2L12 3z"/>
+            </svg>
+          </div>
           <div>
-            <h3 id="assistTitle">Switch to Guided Wizard?</h3>
-            <p class="assist-sub">AuraGen noticed hesitation or repeated interactions in the full form.</p>
+            <h3 id="assistTitle">Switch to Guided Steps?</h3>
+            <p class="assist-sub">Complete this application one section at a time with focused guidance.</p>
           </div>
         </div>
         <div class="assist-details">
           <div class="assist-metric-pill">
-            <span class="pill-label">Trigger:</span>
-            <strong id="assistReason">Hesitation pause</strong>
+            <span class="pill-label">Reason:</span>
+            <strong id="assistReason">Extended pause</strong>
           </div>
           <div class="assist-metric-pill">
-            <span class="pill-label">Friction Score:</span>
+            <span class="pill-label">Effort Index:</span>
             <strong id="assistScore" class="score-high">85 / 100</strong>
           </div>
         </div>
         <p class="assist-desc">
-          Switch to a focused 5-step guided flow generated by Gemini? All data you already entered stays locally in your browser.
+          Everything you have already entered will stay intact, and you can return to the full form anytime.
         </p>
         <div class="assist-actions">
-          <button type="button" class="btn-primary" id="btnAcceptSimplify">Yes, Simplify Form</button>
-          <button type="button" class="btn-ghost" id="btnDismissSimplify">Keep Full Form</button>
+          <button type="button" class="btn-primary" id="btnAcceptSimplify">Use Guided Steps</button>
+          <button type="button" class="btn-ghost" id="btnDismissSimplify">Stay on Full Form</button>
         </div>
       </div>
     </div>
@@ -926,12 +1031,12 @@
       <div class="confirm-modal">
         <div class="confirm-header">
           <div class="confirm-badge">✓</div>
-          <h3 id="confirmTitle">AI Underwriting Complete</h3>
-          <p>Preliminary assessment generated from your proposal.</p>
+          <h3 id="confirmTitle">Proposal Reviewed</h3>
+          <p>Preliminary quote and eligibility summary.</p>
         </div>
         <div class="confirm-grid" id="confirmSummary"></div>
         <div class="confirm-actions">
-          <button type="button" class="btn-primary" id="btnDownloadReceipt">Download Receipt (JSON)</button>
+          <button type="button" class="btn-primary" id="btnDownloadReceipt">Download Summary (JSON)</button>
           <button type="button" class="btn-ghost" id="btnCloseConfirm">Close</button>
         </div>
       </div>
@@ -963,6 +1068,16 @@
       $("evalBody").hidden = !$("evalBody").hidden;
     });
 
+    if ($("sectionNav")) {
+      $("sectionNav").addEventListener("click", e => {
+        const pill = e.target.closest("[data-jump]");
+        if (!pill) return;
+        const sec = formArea.querySelector(`.form-section[data-section="${pill.dataset.jump}"]`);
+        if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        $("sectionNav").querySelectorAll(".sec-pill").forEach(p => p.classList.toggle("active", p === pill));
+      });
+    }
+
     function escapeHtml(str) {
       if (!str) return "";
       return String(str)
@@ -970,60 +1085,50 @@
         .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    function syncSidebarGuide(fieldLabel, guide, example, sourceLabel) {
+    function syncSidebarGuide(fieldLabel, guide, example) {
       const sidebar = $("sidebarFieldGuide");
       if (!sidebar) return;
       if (!fieldLabel) {
-        sidebar.innerHTML = `
-          <div class="copilot-header">
-            <span class="copilot-badge">Gemini Field Guide</span>
-            <span class="copilot-tag">Ready</span>
-          </div>
-          <div class="sidebar-copilot-empty">Click or focus any field or dropdown to fetch live Gemini guidance.</div>
-        `;
+        sidebar.innerHTML = `<div class="sidebar-copilot-empty">Select any field to see a helpful tip and example.</div>`;
         return;
       }
       if (!guide) {
         sidebar.innerHTML = `
-          <div class="copilot-header">
-            <span class="copilot-badge">Gemini Field Guide</span>
-            <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
+          <div class="copilot-header" style="margin-bottom:6px;padding-bottom:6px;">
+            <strong style="font-size:12.5px;color:var(--ink);">${escapeHtml(fieldLabel)}</strong>
           </div>
-          <div class="copilot-loading"><span class="copilot-spinner"></span><span>Asking Gemini...</span></div>
+          <div class="copilot-loading"><span class="copilot-spinner"></span><span>Loading tip...</span></div>
         `;
         return;
       }
       sidebar.innerHTML = `
-        <div class="copilot-header">
-          <span class="copilot-badge">Gemini Field Guide${sourceLabel ? " · " + escapeHtml(sourceLabel) : ""}</span>
-          <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
+        <div class="copilot-header" style="margin-bottom:8px;padding-bottom:6px;">
+          <strong style="font-size:12.5px;color:var(--ink);">${escapeHtml(fieldLabel)}</strong>
         </div>
         <div class="copilot-row">
-          <span class="copilot-badge-tip">TIP</span>
           <span class="copilot-text">${escapeHtml(guide)}</span>
         </div>
         <div class="copilot-row example">
-          <span class="copilot-badge-example">EXAMPLE</span>
+          <span style="font-size:11.5px;color:var(--muted);font-weight:600;">Example:</span>
           <span class="copilot-example-val">${escapeHtml(example || "Standard value")}</span>
         </div>
       `;
     }
 
-    function renderCopilotContent(copilotEl, fieldLabel, guide, example, sourceLabel) {
+    function renderCopilotContent(copilotEl, fieldLabel, guide, example) {
       const body = copilotEl.querySelector(".copilot-body");
       if (body) {
         body.innerHTML = `
           <div class="copilot-row">
-            <span class="copilot-badge-tip">TIP</span>
             <span class="copilot-text">${escapeHtml(guide)}</span>
           </div>
           <div class="copilot-row example">
-            <span class="copilot-badge-example">EXAMPLE</span>
+            <span style="font-size:11.5px;color:var(--muted);font-weight:600;">Example:</span>
             <span class="copilot-example-val">${escapeHtml(example || "Standard value")}</span>
           </div>
         `;
       }
-      syncSidebarGuide(fieldLabel, guide, example, sourceLabel);
+      syncSidebarGuide(fieldLabel, guide, example);
     }
 
     function activateFieldCopilot(control, fieldName, fieldLabel) {
@@ -1038,23 +1143,24 @@
       if (!parent) return;
 
       const copilot = document.createElement("div");
-      copilot.className = "active-field-copilot";
+      copilot.className = control.tagName === "SELECT"
+        ? "active-field-copilot above-select"
+        : "active-field-copilot";
       copilot.id = `copilot-${fieldName}`;
       copilot.dataset.label = fieldLabel;
       copilot.innerHTML = `
-        <div class="copilot-header">
-          <span class="copilot-badge">Gemini AI Guide</span>
-          <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
+        <div class="copilot-header" style="margin-bottom:6px;padding-bottom:6px;">
+          <strong style="font-size:12px;color:var(--ink);">${escapeHtml(fieldLabel)}</strong>
         </div>
         <div class="copilot-body">
           <div class="copilot-loading">
             <span class="copilot-spinner"></span>
-            <span>Fetching guidance...</span>
+            <span>Loading tip...</span>
           </div>
         </div>
       `;
       parent.append(copilot);
-      syncSidebarGuide(fieldLabel, null, null, null);
+      syncSidebarGuide(fieldLabel, null, null);
 
       if (clientFieldCache.has(fieldName)) {
         const cached = clientFieldCache.get(fieldName);
@@ -1082,8 +1188,8 @@
               const example = data.example || data.how;
               clientFieldCache.set(fieldName, { guide, example });
               if (currentActiveFieldName === fieldName) {
-                renderCopilotContent(copilot, fieldLabel, guide, example, data.source);
-                log(`Gemini guidance ready for '${fieldLabel}' (${data.source}, ${data.latencyMs}ms).`);
+                renderCopilotContent(copilot, fieldLabel, guide, example);
+                log(`Loaded guidance for ${fieldLabel}.`);
               }
             }
           })
@@ -1256,7 +1362,7 @@
       banner.innerHTML = `
         <div class="guided-banner-top">
           <strong class="guided-title">${escapeHtml(titleText)}</strong>
-          <span class="guided-trust-badge">${usedGemini ? "Gemini Guided Shell" : "Offline Safe Shell"} · Zero-AI PII</span>
+          <span class="guided-trust-badge">Private Guided Mode</span>
         </div>
         <p class="guided-caption">${escapeHtml(captionText)}</p>
       `;
@@ -1268,13 +1374,13 @@
         $("simplifiedView").replaceChildren(wizard);
         $("complexView").hidden = true;
         $("simplifiedView").hidden = false;
-        $("modeBadge").textContent = "Guided Wizard";
+        $("modeBadge").textContent = "Guided Steps";
         $("modeBadge").className = "pill mode-simple";
         $("toast").hidden = true;
         isSimplified = true;
         isTransitioning = false;
       });
-      log(`Switched to Guided Wizard (${reason} · ${usedGemini ? source : "SAFE_FALLBACK"}).`);
+      log(`Switched to Guided Steps (${reason}).`);
     }
 
     function syncWizardToForm() {
@@ -1296,14 +1402,14 @@
       morph(() => {
         $("simplifiedView").hidden = true;
         $("complexView").hidden = false;
-        $("modeBadge").textContent = "Standard Portal";
+        $("modeBadge").textContent = "Full Form";
         $("modeBadge").className = "pill mode-full";
         $("toast").hidden = true;
         isSimplified = false;
         isTransitioning = false;
         resetMetrics();
       });
-      log("Returned to Standard Portal.");
+      log("Returned to Full Form.");
     }
 
     function resetMetrics() {
@@ -1329,9 +1435,9 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
           ws.send(JSON.stringify({ events: [{ type }], cognitiveScore: score, domContext: { formId: "insurance-proposal-v1" } }));
-          log(`Sent ${type} signal to Gemini UI generator.`);
+          log("Preparing guided step-by-step view.");
         } catch (err) {
-          log(`WebSocket send failed (${err.message}).`);
+          log(`Connection error (${err.message}).`);
         }
       }
 
@@ -1371,7 +1477,7 @@
         if (!el.name) continue;
         payload[el.name] = el.type === "checkbox" ? el.checked : el.value;
       }
-      log("Running Gemini AI underwriting assessment (/api/proposals/submit)...");
+      log("Submitting proposal for preliminary underwriting review...");
       try {
         const res = await fetch("/api/proposals/submit", {
           method: "POST",
@@ -1382,7 +1488,7 @@
         if (result.status === "success" && result.record) {
           lastSubmittedRecord = result.record;
           showConfirmationModal(result.record);
-          log(`Proposal ${result.record.applicationId} assessed by ${result.record.underwriting.assessedBy || "AI"}.`);
+          log(`Proposal ${result.record.applicationId} reviewed (${result.record.underwriting.riskTier}).`);
         } else {
           showToast("Proposal processed locally.");
         }
@@ -1399,9 +1505,9 @@
         <div class="confirm-item"><small>Applicant</small><strong>${escapeHtml(record.applicant.fullName)}</strong></div>
         <div class="confirm-item"><small>Plan &amp; Sum Insured</small><strong>${escapeHtml(record.coverage.policyType)} (${escapeHtml(record.coverage.sumInsured)})</strong></div>
         <div class="confirm-item"><small>Tenure &amp; Billing</small><strong>${escapeHtml(record.coverage.tenure)} · ${escapeHtml(record.coverage.frequency)}</strong></div>
-        <div class="confirm-item"><small>Risk Tier (${escapeHtml(u.assessedBy || "AI")})</small><strong style="color:var(--emerald);">${escapeHtml(u.riskTier)}</strong></div>
+        <div class="confirm-item"><small>Risk Tier</small><strong style="color:var(--emerald);">${escapeHtml(u.riskTier)}</strong></div>
         <div class="confirm-item"><small>Total Payable (incl. 18% GST)</small><strong style="color:var(--accent);font-size:16px;">₹${Number(u.totalPayable).toLocaleString()}</strong></div>
-        ${u.underwritingNote ? `<div class="confirm-item full"><small>AI Underwriting Note</small><strong>${escapeHtml(u.underwritingNote)}</strong></div>` : ""}
+        ${u.underwritingNote ? `<div class="confirm-item full"><small>Underwriting Note</small><strong>${escapeHtml(u.underwritingNote)}</strong></div>` : ""}
       `;
       $("confirmModal").hidden = false;
     }
@@ -1448,9 +1554,9 @@
       const host = window.location.host || "127.0.0.1:8765";
       ws = new WebSocket(`${protocol}//${host}/ws/telemetry`);
       ws.onopen = () => {
-        $("wsBadge").textContent = "AI Engine: Live";
+        $("wsBadge").textContent = "Assistant Ready";
         $("wsBadge").className = "pill ws-on";
-        log("Connected to AuraGen Gemini Engine.");
+        log("Assistant connected.");
       };
       ws.onmessage = event => {
         let response;
@@ -1467,31 +1573,31 @@
             if (activeEl) renderCopilotContent(activeEl, label, guide, example, response.source);
             else syncSidebarGuide(label, guide, example, response.source);
           }
-          log(`Gemini guidance for '${response.fieldName}' (${response.source}, ${response.latencyMs}ms).`);
+          log(`Loaded guidance for ${response.fieldName}.`);
           return;
         }
         if (response.type === "RENDER_UI") {
           clearTimeout(pendingTimer);
           pendingWizardMarkup = response.html;
-          pendingWizardReason = response.reason || "Friction detected";
+          pendingWizardReason = response.reason || "Assistance requested";
           pendingWizardSource = response.source || "BACKEND";
           if (isWaitingUserAcceptance) {
-            log(`Wizard shell ready (${pendingWizardSource}). Waiting for your confirmation.`);
+            log("Guided step view ready.");
           } else if (isTransitioning) {
             renderSimplified(response.html, pendingWizardReason, pendingWizardSource);
           }
         } else if (response.type === "ERROR") {
           clearTimeout(pendingTimer);
-          if (isTransitioning) renderSimplified(createBackupShell(), "Backend error", "CLIENT_SAFE_FALLBACK");
+          if (isTransitioning) renderSimplified(createBackupShell(), "Fallback layout", "CLIENT_SAFE_FALLBACK");
         }
       };
-      ws.onerror = () => log("WebSocket error; HTTP/fallback mode available.");
+      ws.onerror = () => log("Using standard connection mode.");
       ws.onclose = () => {
-        $("wsBadge").textContent = "AI Engine: Offline";
+        $("wsBadge").textContent = "Offline Mode";
         $("wsBadge").className = "pill ws-off";
       };
     } catch {
-      log("WebSocket unavailable.");
+      log("Offline mode active.");
     }
 
     function showFieldCopilotFromControl(control) {
@@ -1549,7 +1655,13 @@
       const input = event.target.closest("input");
       if (input) editedFields.delete(input);
       const control = event.target.closest("input,select");
-      if (control) showFieldCopilotFromControl(control);
+      if (control) {
+        showFieldCopilotFromControl(control);
+        const secName = control.closest(".form-section")?.dataset.section;
+        if (secName && $("sectionNav")) {
+          $("sectionNav").querySelectorAll(".sec-pill").forEach(p => p.classList.toggle("active", p.dataset.jump === secName));
+        }
+      }
     });
     formArea.addEventListener("change", event => {
       const control = event.target.closest("select");
@@ -1609,7 +1721,7 @@
       isTransitioning = false;
       snoozeUntil = Date.now() + 30000;
       resetMetrics();
-      log("Kept Standard Portal (prompts snoozed for 30s).");
+      log("Continued on full form.");
     });
 
     $("btnHesitate").addEventListener("click", () => {
@@ -1617,7 +1729,7 @@
       hasInteracted = true;
       hesitationTriggered = false;
       lastActivityTime = Date.now();
-      log("Confusion simulation armed: pause for 3 seconds.");
+      log("Pause simulation armed (3 seconds).");
     });
 
     $("btnRage").addEventListener("click", () => {
@@ -1625,7 +1737,7 @@
       interactions = 4;
       $("mClicks").textContent = "4";
       setScore(90);
-      triggerFriction("rage_click", "Simulated friction (>3 clicks)");
+      triggerFriction("rage_click", "Repeated form clicks");
     });
 
     $("btnFillDemo").addEventListener("click", () => {
@@ -1659,7 +1771,7 @@
 
     $("btnRestore").addEventListener("click", () => {
       if (isSimplified) restoreFullForm();
-      else { resetMetrics(); $("toast").hidden = true; log("Telemetry reset."); }
+      else { resetMetrics(); $("toast").hidden = true; log("Session metrics reset."); }
     });
 
     setInterval(() => {
@@ -1669,11 +1781,11 @@
       if (idleSeconds >= 3 && !hesitationTriggered) {
         hesitationTriggered = true;
         setScore(Math.max(score, 70));
-        triggerFriction("hesitation", "3 seconds of hesitation after interaction");
+        triggerFriction("hesitation", "3-second pause during entry");
       }
     }, 250);
 
-    log("AuraGen Portal initialized.");
+    log("Application ready.");
   })();
   </script>
 </body>
