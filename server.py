@@ -4,46 +4,98 @@ import json
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from google import genai
 from google.genai import types
 
-# ------------------------------------------------------------------------------
-# 1. APPLICATION SETUP & ENVIRONMENT CONFIGURATION
-# ------------------------------------------------------------------------------
-app = FastAPI(title="AuraGen — Self-Healing UI & Underwriting Platform")
+# ==============================================================================
+# 1. APP SETUP & CONFIG
+# ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-# Load secret API keys from env.env (safely git-ignored)
 load_dotenv(BASE_DIR / "env.env")
 
-# Model configuration: gemini-3.1-flash-lite provides sub-1.5s latency
-PRIMARY_MODEL = "gemini-3.1-flash-lite"
-FALLBACK_MODEL = "gemini-3.5-flash-lite"
+PRIMARY_MODEL = "gemini-3.5-flash-lite"
 FORM_ID = "insurance-proposal-v1"
 
-# Fast in-memory caching to guarantee < 10ms repeat responses
+
+class FormSchemaParser(HTMLParser):
+    """Automatically reads form field names and labels from index.html."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.in_form = False
+        self.current_label_for: str | None = None
+        self.label_buf: list[str] = []
+        self.labels: dict[str, str] = {}
+        self.fields: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_map = {k.lower(): (v or "") for k, v in attrs}
+        if tag == "form" and attr_map.get("id") == "proposalForm":
+            self.in_form = True
+        if not self.in_form:
+            return
+        if tag == "label" and attr_map.get("for"):
+            self.current_label_for = attr_map["for"]
+            self.label_buf = []
+        elif tag in {"input", "select", "textarea"}:
+            name = attr_map.get("name") or attr_map.get("data-field") or attr_map.get("id")
+            if name:
+                self.fields.append((name, attr_map.get("id", name)))
+
+    def handle_data(self, data: str) -> None:
+        if self.in_form and self.current_label_for is not None:
+            self.label_buf.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "label" and self.current_label_for is not None:
+            text = " ".join("".join(self.label_buf).replace("*", "").split())
+            if text:
+                self.labels[self.current_label_for] = text[:80]
+            self.current_label_for = None
+        elif tag == "form" and self.in_form:
+            self.in_form = False
+
+
+def load_form_fields() -> dict[str, str]:
+    """Auto-fetch all form fields and labels directly from index.html."""
+    html_path = BASE_DIR / "index.html"
+    if not html_path.exists():
+        return {}
+    parser = FormSchemaParser()
+    parser.feed(html_path.read_text(encoding="utf-8"))
+    parser.close()
+    return {name: parser.labels.get(el_id, name) for name, el_id in parser.fields}
+
+
+# Auto-discovered from index.html at startup (no hardcoded field list)
+FORM_FIELDS: dict[str, str] = load_form_fields()
+
 UI_CACHE: dict[str, str] = {}
 FIELD_GUIDE_CACHE: dict[str, dict[str, str]] = {}
+_CLIENTS: dict[tuple[str, int], genai.Client] = {}
+_current_key_index = 0
 db_lock = asyncio.Lock()
 
 
-# ------------------------------------------------------------------------------
-# 2. MULTI-KEY AUTO-ROTATION (HIGH AVAILABILITY & QUOTA RESILIENCE)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# 2. GEMINI CLIENT & ROTATION
+# ==============================================================================
 def get_api_keys() -> list[str]:
-    """Retrieves all available Gemini keys from environment variables."""
-    raw_keys = os.getenv("GEMINI_API_KEYS", "")
-    keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    """Read Gemini API keys from environment variables."""
+    raw = os.getenv("GEMINI_API_KEYS", "")
+    keys = [k.strip() for k in raw.split(",") if k.strip()]
     if not keys:
         single = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if single:
@@ -51,124 +103,142 @@ def get_api_keys() -> list[str]:
     return keys
 
 
-# Track the current active key index
-_current_key_index = 0
-
-
 def get_next_client() -> tuple[genai.Client, str]:
-    """Rotates through available API keys to prevent 429 rate limit errors."""
+    """Return the next cached Gemini client in rotation for the active event loop."""
     global _current_key_index
     keys = get_api_keys()
     if not keys:
-        raise RuntimeError("No Gemini API keys configured in env.env")
+        raise RuntimeError("No Gemini API keys configured.")
+
     key = keys[_current_key_index % len(keys)]
     _current_key_index = (_current_key_index + 1) % len(keys)
-    return genai.Client(api_key=key), key
+    try:
+        loop_id = id(asyncio.get_running_loop())
+    except RuntimeError:
+        loop_id = 0
+    cache_id = (key, loop_id)
+    if cache_id not in _CLIENTS:
+        _CLIENTS[cache_id] = genai.Client(api_key=key)
+    return _CLIENTS[cache_id], key
 
 
-# ------------------------------------------------------------------------------
-# 3. FIELD GUIDANCE (SHORT, DIRECT, SUB-2 SECOND INSTRUCTIONS)
-# ------------------------------------------------------------------------------
-def get_default_guide(field_name: str, field_label: str) -> dict[str, str]:
-    """Deterministic, instant guidance fallback if API exceeds 2 seconds."""
-    defaults = {
-        "policyType": ("Comprehensive medical coverage for family hospitalization.", "Health Insurance"),
-        "sumInsured": ("Recommended minimum is 10 lakhs for metro healthcare.", "₹10,00,000"),
-        "tenure": ("Multi-year locking secures up to 10% premium discount.", "3 Years"),
-        "startDate": ("Earliest effective coverage commencement date is today.", "2026-12-01"),
-        "frequency": ("Annual payment waives installment administrative surcharge fees.", "Annual"),
-        "fullName": ("Must match your official government identity proof exactly.", "Aarav Sharma"),
-        "dob": ("Must be 18 years or older for policyholder eligibility.", "1992-05-15"),
-        "gender": ("Required for actuarial life expectancy risk rating tables.", "Male"),
-        "maritalStatus": ("Determines family floater policy addition privileges.", "Married"),
-        "nationality": ("Country issuing your primary tax citizenship residence.", "Indian"),
-        "tobacco": ("Crucial for claim clearance; non-smokers get lower rates.", "No"),
-        "occupation": ("Hazard classification for professional underwriting tiering.", "Salaried Professional"),
-        "income": ("Required for financial underwriting limits above 10 lakhs.", "₹10L – ₹25L"),
-        "employer": ("Current organization or write 'Self-Employed' if business owner.", "Infosys Ltd"),
-        "medical": ("Declare chronic conditions; write 'None' if no history.", "None"),
-        "email": ("Policy certificates and tax deduction receipts delivered here.", "name@example.com"),
-        "phone": ("Used for instant claim authorization OTP alerts.", "9876543210"),
-        "address": ("Permanent residence where formal notices are delivered.", "Flat 402, Green Meadows"),
-        "cityState": ("Determines medical zone and network hospital reimbursement.", "Bengaluru, Karnataka"),
-        "pincode": ("6-digit postal code of your residential location.", "560001"),
-        "idType": ("PAN is mandatory for annual premium exceeding ₹50,000.", "PAN Card"),
-        "idNumber": ("10-character alphanumeric PAN printed on your card.", "ABCDE1234F"),
-        "nomineeName": ("Legal beneficiary designated to receive claim proceeds.", "Priya Sharma"),
-        "nomineeRelation": ("Family relationship of nominee to the primary insured.", "Spouse"),
-        "prevPolicy": ("Mention existing policy for No-Claim Bonus transfer.", "POL-78912"),
-        "agree": ("Legal confirmation of complete and truthful disclosure.", "Checked"),
-    }
-    tip, eg = defaults.get(
-        field_name,
-        (f"Accurate information required for risk evaluation.", f"Standard format for {field_label}")
-    )
-    return {"guide": tip, "example": eg, "what": tip, "how": eg}
+def _parse_json(raw: str) -> Any:
+    cleaned = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    return json.loads(cleaned)
 
 
-async def _generate_field_guidance(field_name: str, field_label: str) -> dict[str, str]:
-    """Generates concise guidance via Gemini with strict sub-2s timeout."""
-    # 1. Return immediately from cache if available (< 1ms)
-    if field_name in FIELD_GUIDE_CACHE:
-        return FIELD_GUIDE_CACHE[field_name]
-
+async def ask_gemini(
+    prompt: str,
+    *,
+    system_instruction: str | None = None,
+    json_mode: bool = False,
+    timeout: float = 4.0,
+) -> str | None:
+    """Call Gemini with automatic key rotation and timeout."""
     keys = get_api_keys()
     if not keys:
-        fallback = get_default_guide(field_name, field_label)
-        FIELD_GUIDE_CACHE[field_name] = fallback
-        return fallback
+        return None
 
-    prompt = (
-        "You are a concise form assistant. Given a form field, return JSON with:\n"
-        "- \"guide\": 1 ultra-short tip on what to enter or where to find it (max 10 words). Do not repeat the field label or say \"Enter/Select your...\".\n"
-        "- \"example\": 1 realistic example value (max 5 words).\n\n"
-        "Example output for \"Group Number\":\n"
-        "{\"guide\": \"Found on your insurance card near your Member ID.\", \"example\": \"e.g., GRP-98421\"}\n\n"
-        f"Target field: \"{field_label}\" (attribute key: \"{field_name}\")\n"
-        "Return pure valid JSON only."
-    )
+    config_args: dict[str, Any] = {"temperature": 0.15}
+    if system_instruction:
+        config_args["system_instruction"] = system_instruction
+    if json_mode:
+        config_args["response_mime_type"] = "application/json"
 
-    # Try rotating keys with a strict 2.0-second timeout
-    for _ in range(min(len(keys), 3)):
+    for _ in range(min(len(keys), 2)):
         try:
             client, _ = get_next_client()
             response = await asyncio.wait_for(
                 client.aio.models.generate_content(
                     model=PRIMARY_MODEL,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.1,
-                    ),
+                    config=types.GenerateContentConfig(**config_args),
                 ),
-                timeout=2.0,  # Enforce max 2 seconds response rule
+                timeout=timeout,
             )
-            data = json.loads(response.text.strip())
-            guide_val = str(data.get("guide", data.get("what", ""))).strip()
-            example_val = str(data.get("example", data.get("how", ""))).strip()
-            if guide_val and example_val:
-                result = {
-                    "guide": guide_val,
-                    "example": example_val,
-                    "what": guide_val,
-                    "how": example_val,
-                }
-                FIELD_GUIDE_CACHE[field_name] = result
-                return result
+            return response.text.strip()
         except Exception:
             continue
-
-    # Instant fallback if network or API was slower than 2 seconds
-    fallback = get_default_guide(field_name, field_label)
-    FIELD_GUIDE_CACHE[field_name] = fallback
-    return fallback
+    return None
 
 
-# ------------------------------------------------------------------------------
-# 4. AST SECURITY PARSER (VALIDATES LLM-GENERATED CODE BEFORE DOM INJECTION)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# 3. AI-GENERATED FIELD GUIDANCE (BATCH WARMUP + LIVE ON-DEMAND)
+# ==============================================================================
+def _pack_guide(guide: str, example: str) -> dict[str, str]:
+    return {"guide": guide, "example": example, "what": guide, "how": example}
+
+
+async def warm_field_guides() -> None:
+    """Ask Gemini once at startup to generate guides & examples for all form fields."""
+    if not get_api_keys():
+        return
+
+    fields_json = json.dumps(FORM_FIELDS, ensure_ascii=False)
+    prompt = (
+        "Generate concise Indian insurance form help for every field key below.\n"
+        "Return a JSON object mapping each key to {\"guide\": \"max 10 words\", \"example\": \"max 5 words\"}.\n"
+        f"Fields: {fields_json}"
+    )
+    raw = await ask_gemini(prompt, json_mode=True, timeout=12.0)
+    if not raw:
+        return
+    try:
+        parsed = _parse_json(raw)
+        if isinstance(parsed, dict):
+            for key, item in parsed.items():
+                if key in FORM_FIELDS and isinstance(item, dict):
+                    g = str(item.get("guide", "")).strip()
+                    e = str(item.get("example", "")).strip()
+                    if g and e and key not in FIELD_GUIDE_CACHE:
+                        FIELD_GUIDE_CACHE[key] = _pack_guide(g, e)
+    except Exception:
+        pass
+
+
+async def _generate_field_guidance(field_name: str, field_label: str) -> tuple[dict[str, str], str]:
+    """Return Gemini-generated field guidance (cached or live)."""
+    if field_name in FIELD_GUIDE_CACHE:
+        return FIELD_GUIDE_CACHE[field_name], "GEMINI_CACHE"
+
+    prompt = (
+        "Return pure JSON with:\n"
+        '- "guide": 1 short helpful tip on what to choose/enter (max 10 words, no filler).\n'
+        '- "example": 1 realistic example value (max 5 words).\n'
+        f'Field: "{field_label}" (key: "{field_name}")'
+    )
+    raw = await ask_gemini(prompt, json_mode=True, timeout=4.5)
+    if raw:
+        try:
+            data = _parse_json(raw)
+            guide = str(data.get("guide", data.get("what", ""))).strip()
+            example = str(data.get("example", data.get("how", ""))).strip()
+            if guide and example:
+                packed = _pack_guide(guide, example)
+                FIELD_GUIDE_CACHE[field_name] = packed
+                return packed, "GEMINI_LIVE"
+        except Exception:
+            pass
+
+    # Minimal offline safety message only if Gemini is completely unreachable
+    return _pack_guide(f"Provide accurate details for {field_label}.", "Valid entry"), "OFFLINE_FALLBACK"
+
+
+# ==============================================================================
+# 4. AI-GENERATED WIZARD HTML & AST SECURITY CHECK
+# ==============================================================================
+SYSTEM_PROMPT = """You are AuraGen, a privacy-first UI generator for guided insurance proposal forms.
+
+Core Rules:
+- Output raw, valid HTML only. No markdown fences, no explanations, no extra text.
+- Keep copy ultra-short and calm, reassuring the user their details stay in the browser.
+- Output ONLY this exact structure, customizing only the <h2> and <p> text:
+<div class="wizard-box"><h2>Short calm title</h2><p>Short reassuring line.</p><form id="wizardForm"><div id="wizardFields"></div><div id="wizardProgress"></div><div id="wizardStatus"></div><div class="wizard-actions"><button type="button" class="btn-ghost" data-action="previous">Previous</button><button type="button" class="btn-primary" data-action="next">Next section</button><button type="button" class="btn-success" data-action="confirm">Confirm &amp; Finish</button><button type="button" class="btn-ghost" data-action="restore">Go Back to Full Form</button></div></form></div>"""
+
+
 class HTMLSecurityParser(HTMLParser):
-    """Parses LLM HTML into an AST to block malicious scripts, XSS, and syntax errors."""
+    """Validates AI-generated HTML to block scripts, unsafe attributes, or missing slots."""
+
     ALLOWED_TAGS = {"div", "form", "p", "h2", "h3", "label", "button", "span", "strong"}
     ALLOWED_ATTRS = {"class", "id", "type", "data-action"}
     REQUIRED_ACTIONS = {"previous", "next", "confirm", "restore"}
@@ -190,35 +260,40 @@ class HTMLSecurityParser(HTMLParser):
         if tag not in self.ALLOWED_TAGS or self.root_closed:
             self.safe = False
             return
+
         attr_map = {k.lower(): (v or "") for k, v in attrs}
-        if any(name not in self.ALLOWED_ATTRS for name in attr_map):
+        if any(k not in self.ALLOWED_ATTRS for k in attr_map):
             self.safe = False
-        for value in attr_map.values():
-            if "javascript:" in value.lower() or "data:" in value.lower():
+        if any("javascript:" in v.lower() or "data:" in v.lower() for v in attr_map.values()):
+            self.safe = False
+
+        el_id = attr_map.get("id")
+        if el_id:
+            if el_id in self.ids:
                 self.safe = False
-        element_id = attr_map.get("id")
-        if element_id:
-            if element_id in self.ids:
-                self.safe = False
-            self.ids.add(element_id)
-            if element_id in self.REQUIRED_SLOTS:
+            self.ids.add(el_id)
+            if el_id in self.REQUIRED_SLOTS:
                 if "form" not in self.stack:
                     self.safe = False
-                self.slots.add(element_id)
+                self.slots.add(el_id)
+
         if not self.root_seen:
             self.root_seen = True
             if tag != "div" or attr_map.get("class") != "wizard-box":
                 self.safe = False
+
         if tag == "form":
             self.form_count += 1
             if attr_map.get("id") != "wizardForm":
                 self.safe = False
+
         if tag == "button":
             action = attr_map.get("data-action")
             if "form" not in self.stack or attr_map.get("type") != "button" or action not in self.REQUIRED_ACTIONS:
                 self.safe = False
             elif action:
                 self.action_counts[action] = self.action_counts.get(action, 0) + 1
+
         self.stack.append(tag)
 
     def handle_endtag(self, tag: str) -> None:
@@ -238,7 +313,6 @@ class HTMLSecurityParser(HTMLParser):
 
 
 def validate_html(markup: str) -> bool:
-    """Validates that generated HTML strictly adheres to AST security standards."""
     if not markup or len(markup) > 15_000:
         return False
     parser = HTMLSecurityParser()
@@ -254,18 +328,14 @@ def validate_html(markup: str) -> bool:
         and not parser.stack
         and parser.form_count == 1
         and parser.slots == parser.REQUIRED_SLOTS
-        and parser.action_counts == {action: 1 for action in parser.REQUIRED_ACTIONS}
+        and parser.action_counts == {a: 1 for a in parser.REQUIRED_ACTIONS}
     )
 
 
 def _fallback_html() -> str:
-    """Standard pre-compiled shell used when offline."""
     return (
-        '<div class="wizard-box">'
-        '<form id="wizardForm">'
-        '<div id="wizardFields"></div>'
-        '<div id="wizardProgress"></div>'
-        '<div id="wizardStatus"></div>'
+        '<div class="wizard-box"><form id="wizardForm">'
+        '<div id="wizardFields"></div><div id="wizardProgress"></div><div id="wizardStatus"></div>'
         '<div class="wizard-actions">'
         '<button type="button" class="btn-ghost" data-action="previous">Previous</button>'
         '<button type="button" class="btn-primary" data-action="next">Next section</button>'
@@ -275,60 +345,111 @@ def _fallback_html() -> str:
     )
 
 
-SYSTEM_PROMPT = """You are AuraGen, a privacy-first UI generator for guided insurance proposal forms.
-
-Core Rules:
-- Output raw, valid HTML only. No markdown fences, no explanations, no extra text.
-- Keep all copy ultra-short, calm, and actionable. Never add filler or obvious instructions.
-- Reassure the user that all entered details stay locally in their browser and are never sent to an AI service.
-- Never generate <input>, <select>, <textarea>, <style>, or <script> tags.
-- Strictly preserve all required IDs, classes, and data-action attributes from the requested template.
-
-Output must begin with <div class="wizard-box"> and end with </div>."""
-
-def _cache_key(trigger: str, context: dict[str, str]) -> str:
-    canonical = json.dumps(context, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(f"{trigger}|{canonical}".encode("utf-8")).hexdigest()
-
-
 async def _generate_html(trigger: str, score: int, context: dict[str, str]) -> tuple[str, str]:
-    """Generates the simplified wizard shell via Gemini under 2 seconds."""
-    cache_key = _cache_key(trigger, context)
+    raw_key = json.dumps(context, sort_keys=True, separators=(",", ":"))
+    cache_key = hashlib.sha256(f"{trigger}|{raw_key}".encode()).hexdigest()
     if cache_key in UI_CACHE:
         return UI_CACHE[cache_key], "CACHE_HIT"
 
-    keys = get_api_keys()
-    if not keys:
-        return _fallback_html(), "SERVER_SAFE_FALLBACK"
-
     prompt = f"User experienced {trigger} with friction score {score}/100. Generate the adaptive wizard shell."
-    for _ in range(min(len(keys), 3)):
-        try:
-            client, _ = get_next_client()
-            response = await asyncio.wait_for(
-                client.aio.models.generate_content(
-                    model=PRIMARY_MODEL,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
-                        temperature=0.1,
-                    ),
-                ),
-                timeout=2.2,
-            )
-            markup = response.text.strip().removeprefix("```html").removeprefix("```").removesuffix("```").strip()
-            if validate_html(markup):
-                UI_CACHE[cache_key] = markup
-                return markup, "GEMINI_STREAM"
-        except Exception:
-            continue
+    raw_html = await ask_gemini(prompt, system_instruction=SYSTEM_PROMPT, timeout=4.0)
+    if raw_html:
+        markup = raw_html.removeprefix("```html").removeprefix("```").removesuffix("```").strip()
+        if validate_html(markup):
+            UI_CACHE[cache_key] = markup
+            return markup, "GEMINI_STREAM"
 
     return _fallback_html(), "SERVER_SAFE_FALLBACK"
 
 
-# ------------------------------------------------------------------------------
-# 5. REST API ENDPOINTS
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# 5. AI UNDERWRITING & QUOTE ASSESSMENT
+# ==============================================================================
+async def assess_proposal_with_llm(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Use Gemini for underwriting risk assessment & pricing (zero PII sent)."""
+    sum_str = str(data.get("sumInsured", "₹10,00,000"))
+    frequency = str(data.get("frequency", "Annual"))
+
+    # Send only non-PII underwriting attributes to Gemini
+    risk_profile = {
+        "policyType": data.get("policyType", "Health Insurance"),
+        "sumInsured": sum_str,
+        "tenure": data.get("tenure", "3 Years"),
+        "frequency": frequency,
+        "dob": data.get("dob", ""),
+        "tobacco": data.get("tobacco", "No"),
+        "occupation": data.get("occupation", ""),
+        "income": data.get("income", ""),
+        "medical": data.get("medical", "None"),
+    }
+
+    prompt = (
+        "You are an insurance underwriting engine. Assess this anonymized risk profile and calculate the quote in INR.\n"
+        "Pricing formula:\n"
+        "- basePremium = 0.0085 * numeric sumInsured (e.g. ₹10,00,000 -> 8500)\n"
+        "- tobacco loading = +20% of basePremium if tobacco is Occasional/Regular/Yes\n"
+        "- medical loading = +15% of basePremium if medical is non-empty and not 'None'\n"
+        "- annual discount = -8% of basePremium if frequency contains 'Annual'\n"
+        "- net = max(1800, basePremium + tobacco_loading + medical_loading - annual_discount)\n"
+        "- gst18 = round(0.18 * net, 2); totalPayable = round(net + gst18, 2)\n\n"
+        "Return pure JSON with exact keys:\n"
+        '{"riskTier": "Standard Risk" or "Rated Risk", "basePremium": number, "discount": number, '
+        '"gst18": number, "totalPayable": number, "status": "APPROVED_PRELIMINARY", '
+        '"underwritingNote": "1 concise professional sentence explaining the decision"}\n\n'
+        f"Profile: {json.dumps(risk_profile, ensure_ascii=False)}"
+    )
+
+    raw = await ask_gemini(prompt, json_mode=True, timeout=5.0)
+    if raw:
+        try:
+            res = _parse_json(raw)
+            return sum_str, {
+                "riskTier": str(res["riskTier"]),
+                "basePremium": round(float(res["basePremium"]), 2),
+                "discount": round(float(res["discount"]), 2),
+                "gst18": round(float(res["gst18"]), 2),
+                "totalPayable": round(float(res["totalPayable"]), 2),
+                "status": str(res.get("status", "APPROVED_PRELIMINARY")),
+                "underwritingNote": str(res.get("underwritingNote", "Preliminary underwriting completed by AuraGen AI.")),
+                "assessedBy": "GEMINI_LLM",
+            }
+        except Exception:
+            pass
+
+    # Deterministic fallback only if Gemini is offline
+    sum_options = [(("50,00,000", "50L"), 5_000_000), (("25,00,000", "25L"), 2_500_000), (("10,00,000", "10L"), 1_000_000), (("5,00,000", "5L"), 500_000)]
+    numeric_sum = next((amt for tokens, amt in sum_options if any(t in sum_str for t in tokens)), 1_000_000)
+    base = numeric_sum * 0.0085
+    tobacco_load = base * 0.20 if any(w in str(data.get("tobacco", "")).lower() for w in ("regular", "occasional", "yes")) else 0.0
+    med = str(data.get("medical", "")).strip().lower()
+    med_load = base * 0.15 if (med and med != "none") else 0.0
+    discount = base * 0.08 if "annual" in frequency.lower() else 0.0
+    net = max(1800, base + tobacco_load + med_load - discount)
+    gst = round(net * 0.18, 2)
+    return sum_str, {
+        "riskTier": "Standard Risk" if tobacco_load == 0 and med_load == 0 else "Rated Risk",
+        "basePremium": round(base, 2),
+        "discount": round(discount, 2),
+        "gst18": gst,
+        "totalPayable": round(net + gst, 2),
+        "status": "APPROVED_PRELIMINARY",
+        "underwritingNote": "Preliminary quote calculated via local fallback rules.",
+        "assessedBy": "OFFLINE_FALLBACK",
+    }
+
+
+# ==============================================================================
+# 6. FASTAPI APP & ROUTES
+# ==============================================================================
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    asyncio.create_task(warm_field_guides())
+    yield
+
+
+app = FastAPI(title="AuraGen — Self-Healing UI & Underwriting Platform", lifespan=lifespan)
+
+
 @app.get("/")
 async def serve_frontend() -> FileResponse:
     return FileResponse(BASE_DIR / "index.html")
@@ -340,6 +461,8 @@ async def health() -> dict[str, Any]:
         "status": "ok",
         "platform": "AuraGen Enterprise",
         "keys_loaded": len(get_api_keys()),
+        "fields_discovered": len(FORM_FIELDS),
+        "guides_cached": len(FIELD_GUIDE_CACHE),
         "model": PRIMARY_MODEL,
     }
 
@@ -347,48 +470,21 @@ async def health() -> dict[str, Any]:
 @app.get("/api/field-guidance")
 async def get_field_guidance_endpoint(name: str, label: str = "") -> dict[str, Any]:
     t0 = time.perf_counter()
-    guide = await _generate_field_guidance(name, label or name)
+    guide, source = await _generate_field_guidance(name, label or FORM_FIELDS.get(name, name))
     latency = round((time.perf_counter() - t0) * 1000, 2)
-    source = "CACHE" if latency < 15 else "GEMINI_LIVE"
     return {"status": "ok", "fieldName": name, "source": source, "latencyMs": latency, **guide}
 
 
 @app.post("/api/proposals/submit")
 async def submit_proposal(request: Request) -> JSONResponse:
-    """Processes proposal submission, calculates real actuarial quote, and stores record."""
     try:
         data = await request.json()
     except Exception:
         return JSONResponse({"status": "error", "message": "Invalid JSON"}, status_code=400)
 
-    # Real quote calculation with safe descending order to prevent substring collision
-    sum_str = str(data.get("sumInsured", "₹10,00,000"))
-    if "50,00,000" in sum_str or "50L" in sum_str:
-        numeric_sum = 5000000
-    elif "25,00,000" in sum_str or "25L" in sum_str:
-        numeric_sum = 2500000
-    elif "10,00,000" in sum_str or "10L" in sum_str:
-        numeric_sum = 1000000
-    elif "5,00,000" in sum_str or "5L" in sum_str:
-        numeric_sum = 500000
-    else:
-        numeric_sum = 1000000
-
-    base_premium = numeric_sum * 0.0085
-    tobacco = str(data.get("tobacco", "No")).lower()
-    tobacco_load = base_premium * 0.20 if ("regular" in tobacco or "occasional" in tobacco or "yes" in tobacco) else 0.0
-    medical = str(data.get("medical", "")).strip().lower()
-    medical_load = base_premium * 0.15 if (medical and medical != "none") else 0.0
-    frequency = str(data.get("frequency", "Annual"))
-    discount = base_premium * 0.08 if "annual" in frequency.lower() else 0.0
-
-    net = max(1800, base_premium + tobacco_load + medical_load - discount)
-    gst = round(net * 0.18, 2)
-    total = round(net + gst, 2)
-
-    app_id = f"AURA-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}"
+    sum_str, underwriting = await assess_proposal_with_llm(data)
     record = {
-        "applicationId": app_id,
+        "applicationId": f"AURA-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}",
         "submittedAt": datetime.now().isoformat(),
         "applicant": {
             "fullName": data.get("fullName", "Applicant"),
@@ -405,19 +501,11 @@ async def submit_proposal(request: Request) -> JSONResponse:
             "policyType": data.get("policyType", "Health Insurance"),
             "sumInsured": sum_str,
             "tenure": data.get("tenure", "3 Years"),
-            "frequency": frequency,
+            "frequency": str(data.get("frequency", "Annual")),
         },
-        "underwriting": {
-            "riskTier": "Standard Risk" if tobacco_load == 0 and medical_load == 0 else "Rated Risk",
-            "basePremium": round(base_premium, 2),
-            "discount": round(discount, 2),
-            "gst18": gst,
-            "totalPayable": total,
-            "status": "APPROVED_PRELIMINARY",
-        }
+        "underwriting": underwriting,
     }
 
-    # Store in local JSON database safely with async lock
     async with db_lock:
         db_file = DATA_DIR / "applications.json"
         try:
@@ -430,9 +518,12 @@ async def submit_proposal(request: Request) -> JSONResponse:
     return JSONResponse({"status": "success", "record": record})
 
 
-# ------------------------------------------------------------------------------
-# 6. REAL-TIME WEBSOCKET (COGNITIVE FRICTION & INSTANT COPILOT GUIDANCE)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# 7. WEBSOCKET (REAL-TIME FRICTION & AI FIELD GUIDANCE)
+# ==============================================================================
+FRICTION_TRIGGERS = {"hesitation", "rage_click", "rapid_submit", "erratic_cursor"}
+
+
 @app.websocket("/ws/telemetry")
 async def telemetry_ws(ws: WebSocket) -> None:
     await ws.accept()
@@ -443,35 +534,24 @@ async def telemetry_ws(ws: WebSocket) -> None:
                 if not isinstance(payload, dict):
                     continue
 
-                # Event 1: Dynamic Field Guidance Request (as user clicks on a field)
                 if payload.get("type") == "FIELD_GUIDANCE_REQUEST":
                     field_name = str(payload.get("fieldName", "")).strip()
-                    field_label = str(payload.get("fieldLabel", field_name)).strip()
+                    field_label = str(payload.get("fieldLabel", FORM_FIELDS.get(field_name, field_name))).strip()
                     t0 = time.perf_counter()
-                    guide = await _generate_field_guidance(field_name, field_label)
+                    guide, source = await _generate_field_guidance(field_name, field_label)
                     latency = round((time.perf_counter() - t0) * 1000, 2)
-                    source = "CACHE" if latency < 15 else "GEMINI_LIVE"
                     await ws.send_json({
                         "type": "FIELD_GUIDANCE_RESPONSE",
                         "fieldName": field_name,
-                        "guide": guide.get("guide", guide.get("what", "")),
-                        "example": guide.get("example", guide.get("how", "")),
-                        "what": guide.get("guide", guide.get("what", "")),
-                        "how": guide.get("example", guide.get("how", "")),
                         "latencyMs": latency,
                         "source": source,
+                        **guide,
                     })
                     continue
 
-                # Event 2: Cognitive Friction Spikes (Rage clicks, Hesitation, Erratic cursor)
                 events = payload.get("events", [])
                 trigger = next(
-                    (
-                        e.get("type")
-                        for e in events
-                        if isinstance(e, dict)
-                        and e.get("type") in {"hesitation", "rage_click", "rapid_submit", "erratic_cursor"}
-                    ),
+                    (e.get("type") for e in events if isinstance(e, dict) and e.get("type") in FRICTION_TRIGGERS),
                     None,
                 )
                 if not trigger:

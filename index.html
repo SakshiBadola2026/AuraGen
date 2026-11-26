@@ -5,217 +5,700 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AuraGen — Self-Healing Proposal Portal</title>
   <style>
-    *,*::before,*::after{box-sizing:border-box}
-    [hidden]{display:none !important}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1e293b;background:#f8fafc;-webkit-font-smoothing:antialiased}
-    .page{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
-    .header{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:22px 26px;border:1px solid #e2e8f0;border-radius:20px;background:#ffffff;box-shadow:0 4px 24px rgba(15,23,42,.04)}
-    .logo{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#059669);color:#ffffff;font-size:19px;font-weight:800;letter-spacing:-.5px;box-shadow:0 8px 18px rgba(79,70,229,.28)}
-    .header h1{margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.4px}
-    .header p{margin:4px 0 0;color:#64748b;font-size:13px}
-    .badges{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
-    .mode-full{background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe}
-    .mode-simple{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
-    .ws-on{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
-    .ws-off{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
-    .compliance-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:12px 18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;color:#475569;font-size:12px}
-    .compliance-tag{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:#0f172a}
-    .eval-panel{margin-bottom:20px;padding:14px 20px;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;box-shadow:0 2px 10px rgba(15,23,42,.02)}
-    .eval-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
-    .eval-title{font-size:12px;font-weight:750;color:#475569;letter-spacing:.4px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
-    .eval-body{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;flex-wrap:wrap}
-    .btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    button{display:inline-flex;align-items:center;justify-content:center;padding:9px 15px;border:1px solid transparent;border-radius:10px;font-size:12px;font-weight:650;cursor:pointer;transition:all .15s ease}
-    button:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
-    .btn-warn{background:#fff7ed;color:#c2410c;border-color:#ffedd5}
-    .btn-warn:hover{background:#ffedd5}
-    .btn-danger{background:#fef2f2;color:#b91c1c;border-color:#fee2e2}
-    .btn-danger:hover{background:#fee2e2}
-    .btn-ghost{background:#f8fafc;color:#334155;border-color:#e2e8f0}
-    .btn-ghost:hover{background:#f1f5f9}
-    .btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:0;box-shadow:0 4px 12px rgba(79,70,229,.25)}
-    .btn-primary:hover{opacity:.95}
-    .btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;box-shadow:0 4px 12px rgba(5,150,105,.25)}
-    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
-    .metric{padding:16px 18px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;box-shadow:0 2px 10px rgba(15,23,42,.03)}
-    .metric small{display:block;margin-bottom:5px;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-    .metric strong{color:#0f172a;font-size:22px;font-weight:800}
-    .bar-wrap{height:6px;margin-top:10px;border-radius:99px;background:#f1f5f9;overflow:hidden}
-    .bar-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444);transition:width .25s ease}
-    .main-grid{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(320px,1fr);gap:22px;align-items:start}
-    #workspaceCard{width:100%;min-width:0}
-    #complexView, #simplifiedView{width:100%}
-    .wizard-box{width:100%}
-    .wizard-box .form-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px}
-    .wizard-box .form-grid.three{grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px}
-    .card{padding:28px;border:1px solid #e2e8f0;border-radius:20px;background:#ffffff;box-shadow:0 4px 24px rgba(15,23,42,.04)}
-    .eyebrow{margin:0 0 5px;color:#6366f1;font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
-    h2{margin:0 0 8px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-.4px}
-    .desc{margin:0 0 24px;color:#64748b;font-size:13px;line-height:1.55}
-    .form-section{margin-bottom:24px;padding:22px;border:1px solid #f1f5f9;border-radius:16px;background:#fafcff}
-    .form-section h3{display:flex;align-items:center;gap:10px;margin:0 0 18px;font-size:16px;font-weight:750;color:#1e293b}
-    .section-index{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:#eef2ff;color:#4f46e5;font-size:11px;font-weight:800}
-    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-    .form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .field{display:flex;flex-direction:column;gap:6px;position:relative}
-    .field.full{grid-column:1/-1}
-    label{font-size:12px;font-weight:650;color:#334155}
-    .required-mark{color:#ef4444}
-    input,select{width:100%;padding:10px 13px;border:1.5px solid #cbd5e1;border-radius:10px;background:#ffffff;font-size:13px;color:#0f172a;outline:0;transition:border-color .15s}
-    input:focus,select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-    .consent-row{display:flex;align-items:flex-start;gap:10px;margin-top:16px;flex-wrap:wrap}
-    .consent-row input{width:16px;height:16px;margin-top:2px;cursor:pointer}
-    .consent-row label{font-size:12px;line-height:1.5;cursor:pointer}
-    .form-footer{display:flex;align-items:center;gap:16px;margin-top:24px;padding-top:20px;border-top:1px solid #f1f5f9}
-    .hint{color:#64748b;font-size:12px}
-    .wizard-box{animation:fadeIn .25s ease-out}
-    .guided-banner{margin-bottom:20px;padding:16px 20px;border:1.5px solid #bfdbfe;border-radius:16px;background:linear-gradient(135deg,#f0f7ff,#ffffff);box-shadow:0 4px 18px rgba(37,99,235,.07)}
-    .guided-banner-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap}
-    .guided-banner-heading{display:flex;align-items:center;gap:8px}
-    .guided-shield-icon{font-size:18px}
-    .guided-title{font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.3px}
-    .guided-trust-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:750;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;letter-spacing:.3px}
-    .guided-caption{margin:0;font-size:13px;line-height:1.5;color:#475569;font-weight:500}
-    .wizard-actions{display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid #f1f5f9;flex-wrap:wrap}
-    .wizard-actions button{flex:1 1 140px}
-    .wizard-progress{margin:0 0 16px;color:#4f46e5;font-size:12px;font-weight:800;letter-spacing:.3px}
-    .wizard-progress-track{height:6px;margin-top:8px;border-radius:99px;background:#f1f5f9;overflow:hidden}
-    .wizard-progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#6366f1,#10b981);transition:width .25s ease}
-    .wizard-status{min-height:18px;margin-top:10px;color:#dc2626;font-size:12px;font-weight:600}
-    .success-toast{margin-top:16px;padding:16px 20px;border:1px solid #a7f3d0;border-radius:14px;background:#ecfdf5;color:#065f46;font-size:13px;font-weight:650}
-    .telemetry-card{position:sticky;top:20px}
-    .log-box{height:450px;overflow-y:auto;padding:14px;border:1px solid #1e293b;border-radius:14px;background:#0f172a;color:#e2e8f0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;line-height:1.65}
-    .log-box div{padding:6px 0 6px 14px;position:relative;border-bottom:1px solid rgba(255,255,255,.06);overflow-wrap:anywhere}
-    .log-box div::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:#10b981}
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --ink: #0f172a;
+      --ink-2: #334155;
+      --muted: #64748b;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-soft: #eef2ff;
+      --emerald: #059669;
+      --emerald-soft: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      --amber: #d97706;
+      --danger: #dc2626;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+      --shadow-md: 0 6px 20px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04);
+    }
 
-    /* Active Field Copilot Guidance Tooltip */
-    .active-field-copilot{margin-top:10px;padding:14px 16px;border:1.5px solid #bfdbfe;border-radius:14px;background:linear-gradient(145deg,#f8faff,#ffffff);box-shadow:0 8px 24px rgba(37,99,235,.08),0 1px 3px rgba(15,23,42,.04);animation:slideDown .18s ease-out}
-    .copilot-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
-    .copilot-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:850;color:#2563eb;letter-spacing:.6px;text-transform:uppercase}
-    .copilot-tag{font-size:10px;font-weight:700;color:#64748b;background:#f1f5f9;padding:2px 7px;border-radius:5px;border:1px solid #e2e8f0}
-    .wizard-box .form-grid.three{grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))}
-    .copilot-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:12.5px;line-height:1.45;flex-wrap:wrap}
-    .copilot-row:last-child{margin-bottom:0}
-    .copilot-row.example{background:#f8fafc;padding:7px 10px;border-radius:8px;border:1px solid #e2e8f0;align-items:center;flex-wrap:wrap;gap:8px}
-    .copilot-badge-tip{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
-    .copilot-badge-example{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
-    .copilot-text{color:#1e293b;font-size:12px;font-weight:500;flex:1 1 180px;word-break:break-word}
-    .copilot-example-val{color:#0f172a;font-size:12px;font-weight:650;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#ffffff;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;word-break:break-word;flex:1 1 auto}
-    .copilot-loading{display:flex;align-items:center;gap:8px;color:#64748b;font-size:12px;padding:4px 0}
-    .copilot-spinner{width:13px;height:13px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin .6s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
-    /* Adaptive Assistance Modal (Prompt to Simplify Form or Not) */
-    .assist-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(6px);display:grid;place-items:center;z-index:9999;padding:20px;animation:fadeIn .2s ease-out}
-    .assist-modal-overlay[hidden]{display:none}
-    .assist-modal{width:min(490px,100%);background:#ffffff;border:1px solid #dbeafe;border-radius:22px;padding:28px;box-shadow:0 24px 50px rgba(15,23,42,.22),0 0 0 1px rgba(99,102,241,.1);animation:slideUp .25s cubic-bezier(.16,1,.3,1)}
-    .assist-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
-    .assist-icon-pulse{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4338ca);color:#fff;display:grid;place-items:center;font-size:22px;flex:0 0 46px;box-shadow:0 8px 20px rgba(99,102,241,.3)}
-    .assist-header h3{margin:0;font-size:18px;color:#0f172a;letter-spacing:-.4px}
-    .assist-sub{margin:4px 0 0;font-size:12px;color:#64748b;line-height:1.45}
-    .assist-details{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-    .assist-metric-pill{flex:1 1 180px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:11px;display:flex;justify-content:space-between;align-items:center}
-    .assist-metric-pill .pill-label{color:#64748b;font-weight:600}
-    .assist-metric-pill strong{color:#1e293b;font-weight:750}
-    .score-high{color:#dc2626!important}
-    .assist-desc{font-size:13px;line-height:1.55;color:#475569;margin:0 0 22px}
-    .assist-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-    .assist-actions button{flex:1 1 160px}
-    @keyframes slideUp{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
 
-    /* Proposal Confirmation Modal */
-    .confirm-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);display:grid;place-items:center;z-index:10000;padding:20px;animation:fadeIn .2s ease-out}
-    .confirm-modal-overlay[hidden]{display:none}
-    .confirm-modal{width:min(560px,100%);background:#ffffff;border:1px solid #d1fae5;border-radius:24px;padding:32px;box-shadow:0 25px 60px rgba(15,23,42,.25)}
-    .confirm-header{text-align:center;margin-bottom:22px}
-    .confirm-badge{width:56px;height:56px;border-radius:50%;background:#ecfdf5;color:#059669;display:grid;place-items:center;font-size:26px;margin:0 auto 12px;box-shadow:0 6px 16px rgba(5,150,105,.2)}
-    .confirm-header h3{margin:0;font-size:22px;color:#0f172a}
-    .confirm-header p{margin:6px 0 0;font-size:13px;color:#64748b}
-    .confirm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px}
-    .confirm-item small{display:block;color:#64748b;font-size:11px;font-weight:650}
-    .confirm-item strong{color:#0f172a;font-size:14px}
-    .confirm-actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 24px 64px;
+    }
 
-    /* Responsive Media Queries */
+    /* Top Bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--ink);
+    }
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      border: 1px solid var(--border);
+    }
+    .pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .mode-full { background: var(--accent-soft); color: var(--accent); border-color: #c7d2fe; }
+    .mode-simple { background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-border); }
+    .ws-on { background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-border); }
+    .ws-off { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
+
+    /* Trust + Simulation Strip */
+    .subbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .trust-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--ink-2);
+      font-weight: 600;
+    }
+
+    .eval-panel {
+      margin-bottom: 18px;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .eval-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .eval-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink-2);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .eval-hint { font-size: 11.5px; color: var(--muted); }
+    .eval-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* Buttons */
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .15s, border-color .15s, transform .08s, box-shadow .15s;
+    }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(79, 70, 229, .25);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-success { background: var(--emerald); color: #ffffff; }
+    .btn-success:hover { background: #047857; }
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface-muted); border-color: var(--border-strong); }
+    .btn-warn { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .btn-warn:hover { background: #fef3c7; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .btn-danger:hover { background: #fee2e2; }
+
+    /* Metrics Strip */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .metric {
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .metric small {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .metric strong {
+      color: var(--ink);
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.3px;
+    }
+    .bar-wrap {
+      height: 5px;
+      margin-top: 8px;
+      border-radius: 99px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+      transition: width .25s ease;
+    }
+
+    /* Main 2-Column Workspace */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.75fr) minmax(330px, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .card {
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+    }
+    h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.35px;
+    }
+    .desc {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Form Sections */
+    .form-section {
+      margin-bottom: 18px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fcfdff;
+    }
+    .form-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 16px;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .section-index {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .form-grid + .form-grid { margin-top: 14px; }
+    .field { display: flex; flex-direction: column; gap: 5px; position: relative; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+    .required-mark { color: var(--danger); }
+
+    input, select {
+      width: 100%;
+      height: 40px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: #ffffff;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      outline: 0;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    select {
+      appearance: none;
+      padding-right: 34px;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .14);
+    }
+
+    .consent-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+    }
+    .consent-row input { width: 16px; height: 16px; margin-top: 2px; cursor: pointer; accent-color: var(--accent); }
+    .consent-row label { font-size: 12.5px; line-height: 1.45; cursor: pointer; color: var(--ink-2); }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .hint { color: var(--muted); font-size: 12px; }
+
+    /* Inline + Sticky Sidebar Gemini Copilot */
+    .active-field-copilot {
+      margin-top: 8px;
+      padding: 12px 14px;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      background: #f8faff;
+      animation: slideDown .16s ease-out;
+    }
+    .sidebar-copilot {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+    }
+    .sidebar-copilot-empty {
+      font-size: 12.5px;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+    .copilot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .copilot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .copilot-tag {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink-2);
+      background: #ffffff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .copilot-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    .copilot-row:last-child { margin-bottom: 0; }
+    .copilot-row.example {
+      background: #ffffff;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      align-items: center;
+    }
+    .copilot-badge-tip, .copilot-badge-example {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copilot-badge-tip { background: var(--accent-soft); color: var(--accent); }
+    .copilot-badge-example { background: var(--emerald-soft); color: var(--emerald); }
+    .copilot-text { color: var(--ink-2); font-size: 12.5px; flex: 1; }
+    .copilot-example-val {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      flex: 1;
+      word-break: break-word;
+    }
+    .copilot-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 2px 0; }
+    .copilot-spinner {
+      width: 13px;
+      height: 13px;
+      border: 2px solid #c7d2fe;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+
+    /* Guided Wizard */
+    .wizard-box { width: 100%; animation: fadeIn .2s ease-out; }
+    .wizard-box .form-grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+    .wizard-box .form-grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    .guided-banner {
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      background: var(--accent-soft);
+    }
+    .guided-banner-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+    .guided-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+    .guided-trust-badge {
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--emerald-soft);
+      color: var(--emerald);
+      border: 1px solid var(--emerald-border);
+    }
+    .guided-caption { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+    .wizard-progress { margin: 0 0 14px; color: var(--accent); font-size: 12px; font-weight: 700; }
+    .wizard-progress-track { height: 6px; margin-top: 7px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+    .wizard-progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--emerald)); transition: width .25s ease; }
+    .wizard-status { min-height: 18px; margin-top: 10px; color: var(--danger); font-size: 12px; font-weight: 600; }
+    .wizard-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .wizard-actions button { flex: 1 1 140px; }
+
+    /* Sticky Telemetry Rail */
+    .telemetry-card { position: sticky; top: 18px; }
+    .log-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 8px;
+    }
+    .log-box {
+      height: 300px;
+      overflow-y: auto;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #0b1120;
+      color: #cbd5e1;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .log-box div {
+      padding: 5px 0 5px 12px;
+      position: relative;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      overflow-wrap: anywhere;
+    }
+    .log-box div::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 11px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .success-toast {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--emerald-border);
+      border-radius: 10px;
+      background: var(--emerald-soft);
+      color: #065f46;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Modals */
+    .assist-modal-overlay, .confirm-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .52);
+      backdrop-filter: blur(5px);
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fadeIn .18s ease-out;
+    }
+    .assist-modal, .confirm-modal {
+      width: min(520px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 26px;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, .22);
+      animation: slideUp .2s ease-out;
+    }
+    .assist-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+    .assist-icon-pulse {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .assist-header h3 { margin: 0; font-size: 17px; color: var(--ink); }
+    .assist-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+    .assist-details { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .assist-metric-pill {
+      flex: 1 1 180px;
+      padding: 9px 12px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 11.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pill-label { color: var(--muted); font-weight: 600; }
+    .score-high { color: var(--danger); }
+    .assist-desc { font-size: 13px; color: var(--ink-2); margin: 0 0 20px; }
+    .assist-actions, .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .assist-actions button, .confirm-actions button { flex: 1 1 160px; }
+
+    .confirm-header { text-align: center; margin-bottom: 18px; }
+    .confirm-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--emerald-soft);
+      color: var(--emerald);
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 auto 10px;
+    }
+    .confirm-header h3 { margin: 0; font-size: 19px; color: var(--ink); }
+    .confirm-header p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+    .confirm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .confirm-item.full { grid-column: 1 / -1; }
+    .confirm-item small { display: block; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .confirm-item strong { color: var(--ink); font-size: 13.5px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
     @media (max-width: 1024px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-      }
-      .telemetry-card {
-        position: static;
-        margin-top: 24px;
-      }
-      .metrics {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      .main-grid { grid-template-columns: 1fr; }
+      .telemetry-card { position: static; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 640px) {
-      .metrics {
-        grid-template-columns: 1fr;
-      }
-      .form-grid, .form-grid.three {
-        grid-template-columns: 1fr;
-      }
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .badges {
-        margin-left: 0;
-      }
+      .page { padding: 14px 14px 48px; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .metrics, .form-grid, .form-grid.three, .confirm-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="header">
-      <div class="logo" aria-hidden="true">AG</div>
-      <div>
-        <h1>AuraGen Insurance Platform</h1>
-        <p>Autonomous Generative UI with Real-Time Emotion &amp; Friction Adaptation</p>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <h1>AuraGen Underwriting Portal</h1>
+          <p>Adaptive proposal experience powered by Gemini AI</p>
+        </div>
       </div>
       <div class="badges">
-        <span class="pill mode-full" id="modeBadge">VIEW: STANDARD PORTAL</span>
-        <span class="pill ws-off" id="wsBadge">ENGINE: INITIALIZING</span>
+        <span class="pill mode-full" id="modeBadge">Standard Portal</span>
+        <span class="pill ws-off" id="wsBadge">Connecting...</span>
       </div>
     </header>
 
-    <div class="compliance-banner">
-      <div class="compliance-tag">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>IRDAI &amp; SOC-2 TYPE II COMPLIANT INFRASTRUCTURE</span>
+    <div class="subbar">
+      <div class="trust-pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.4">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>Browser-Isolated Demo · Zero PII Sent to Gemini</span>
       </div>
-      <span>Client-Side Data Isolation: Zero PII Transmitted to LLM</span>
+      <span>Click any field or dropdown to view live Gemini AI guidance in the right panel.</span>
     </div>
 
-    <section class="eval-panel" aria-label="Evaluation & Friction Simulation Controls">
+    <section class="eval-panel" aria-label="Simulation Controls">
       <div class="eval-header" id="evalToggle">
-        <span class="eval-title">⚡ Developer &amp; Underwriting Telemetry Controls</span>
-        <span style="font-size:12px;color:#64748b;">(Click to collapse/expand)</span>
+        <span class="eval-title">Simulation &amp; Demo Controls</span>
+        <span class="eval-hint">Click to toggle</span>
       </div>
       <div class="eval-body" id="evalBody">
-        <label class="toggle-wrap" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;font-weight:650;cursor:pointer;">
-          <input type="checkbox" id="chkUsePopup" checked style="width:16px;min-height:16px;margin:0;cursor:pointer;accent-color:#4f46e5;">
-          Prompt User via Popup Modal
+        <label style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="chkUsePopup" checked style="width:15px;height:15px;margin:0;cursor:pointer;accent-color:var(--accent);">
+          Prompt before switching to Guided Wizard
         </label>
         <div class="btn-group">
           <button type="button" class="btn-warn" id="btnHesitate">Simulate Confusion (3s Pause)</button>
-          <button type="button" class="btn-danger" id="btnRage">Simulate Rage Clicks (&gt;3 Clicks)</button>
-          <button type="button" class="btn-ghost" id="btnFillDemo">Autofill Realistic Profile</button>
-          <button type="button" class="btn-ghost" id="btnRestore">Reset Telemetry</button>
+          <button type="button" class="btn-danger" id="btnRage">Simulate Friction (&gt;3 Clicks)</button>
+          <button type="button" class="btn-ghost" id="btnFillDemo">Autofill Demo Profile</button>
+          <button type="button" class="btn-ghost" id="btnRestore">Reset</button>
         </div>
       </div>
     </section>
 
-    <section class="metrics" aria-label="Biometric & Cognitive Telemetry">
+    <section class="metrics" aria-label="Live Telemetry">
       <div class="metric"><small>Cursor Velocity</small><strong id="mMoves">0 px/s</strong></div>
-      <div class="metric"><small>Interaction Events</small><strong id="mClicks">0</strong></div>
-      <div class="metric"><small>Hesitation Duration</small><strong id="mIdle">0 sec</strong></div>
+      <div class="metric"><small>Interactions</small><strong id="mClicks">0</strong></div>
+      <div class="metric"><small>Idle Duration</small><strong id="mIdle">0 sec</strong></div>
       <div class="metric">
-        <small>Cognitive Load Score</small><strong id="mScore">0 / 100</strong>
+        <small>Cognitive Load</small><strong id="mScore">0 / 100</strong>
         <div class="bar-wrap" role="progressbar" aria-label="Cognitive load" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div class="bar-fill" id="scoreBar"></div>
         </div>
@@ -225,9 +708,9 @@
     <div class="main-grid">
       <section class="card" id="workspaceCard" aria-labelledby="formTitle">
         <div id="complexView">
-          <p class="eyebrow">COMPREHENSIVE PROPOSAL APPLICATION</p>
-          <h2 id="formTitle">Insurance Underwriting Application</h2>
-          <p class="desc">Complete the 5 sections below. AuraGen continuously monitors cognitive friction to simplify your workflow if friction spikes.</p>
+          <p class="eyebrow">Proposal Application</p>
+          <h2 id="formTitle">Insurance Underwriting Form</h2>
+          <p class="desc">Complete the 5 sections below. AuraGen adapts into a guided step-by-step wizard if friction is detected.</p>
 
           <form id="proposalForm">
             <div id="formArea">
@@ -268,7 +751,7 @@
               </section>
 
               <section class="form-section" data-section="personal">
-                <h3 data-step="02"><span class="section-index" aria-hidden="true">02</span>Insured Personal &amp; Lifestyle Details</h3>
+                <h3 data-step="02"><span class="section-index" aria-hidden="true">02</span>Personal &amp; Lifestyle Details</h3>
                 <div class="form-grid three">
                   <div class="field">
                     <label for="fullName">Full Legal Name <span class="required-mark">*</span></label>
@@ -300,7 +783,7 @@
               </section>
 
               <section class="form-section" data-section="employment">
-                <h3 data-step="03"><span class="section-index" aria-hidden="true">03</span>Employment &amp; Medical Underwriting</h3>
+                <h3 data-step="03"><span class="section-index" aria-hidden="true">03</span>Employment &amp; Medical History</h3>
                 <div class="form-grid">
                   <div class="field">
                     <label for="occupation">Occupation <span class="required-mark">*</span></label>
@@ -322,7 +805,7 @@
               </section>
 
               <section class="form-section" data-section="contact">
-                <h3 data-step="04"><span class="section-index" aria-hidden="true">04</span>Contact &amp; Policy Servicing Address</h3>
+                <h3 data-step="04"><span class="section-index" aria-hidden="true">04</span>Contact &amp; Address</h3>
                 <div class="form-grid">
                   <div class="field">
                     <label for="email">Primary Email Address <span class="required-mark">*</span></label>
@@ -348,7 +831,7 @@
               </section>
 
               <section class="form-section" data-section="kyc">
-                <h3 data-step="05"><span class="section-index" aria-hidden="true">05</span>KYC Verification &amp; Nominee Details</h3>
+                <h3 data-step="05"><span class="section-index" aria-hidden="true">05</span>KYC Verification &amp; Nominee</h3>
                 <div class="form-grid three">
                   <div class="field">
                     <label for="idType">KYC Document Type <span class="required-mark">*</span></label>
@@ -380,8 +863,8 @@
               </section>
             </div>
             <div class="form-footer">
-              <button id="btnSubmit" type="submit" class="btn-primary">Submit Application &amp; Calculate Quote</button>
-              <span class="hint">Instant preliminary underwriting review within 60 seconds.</span>
+              <button id="btnSubmit" type="submit" class="btn-primary">Submit &amp; Run AI Underwriting</button>
+              <span class="hint">Gemini evaluates anonymized risk attributes in real time.</span>
             </div>
           </form>
         </div>
@@ -391,39 +874,49 @@
       </section>
 
       <aside class="card telemetry-card" aria-labelledby="telemetryTitle">
-        <p class="eyebrow">REAL-TIME COGNITIVE LOAD TELEMETRY</p>
-        <h2 id="telemetryTitle">AuraGen Friction Engine</h2>
-        <p class="desc">Continuous client-side biometric heuristics monitor hesitation and frustration to trigger autonomous UI self-healing.</p>
+        <p class="eyebrow">AI Assistant &amp; Telemetry</p>
+        <h2 id="telemetryTitle">Gemini Field Copilot</h2>
+        <p class="desc">Always-visible live guidance for your active field or dropdown.</p>
+
+        <div id="sidebarFieldGuide" class="sidebar-copilot">
+          <div class="copilot-header">
+            <span class="copilot-badge">Gemini Field Guide</span>
+            <span class="copilot-tag">Ready</span>
+          </div>
+          <div class="sidebar-copilot-empty">Click or focus any field or dropdown to fetch live Gemini guidance.</div>
+        </div>
+
+        <p class="log-label">Engine Activity Log</p>
         <div class="log-box" id="logBox" role="log" aria-live="polite" aria-relevant="additions"></div>
       </aside>
     </div>
 
-    <!-- Adaptive Assistance Modal (Prompt to Simplify Form or Not) -->
+    <!-- Adaptive Assistance Modal -->
     <div id="assistModal" class="assist-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="assistTitle">
       <div class="assist-modal">
         <div class="assist-header">
-          <div class="assist-icon-pulse" aria-hidden="true">✨</div>
+          <div class="assist-icon-pulse" aria-hidden="true">AI</div>
           <div>
-            <h3 id="assistTitle">High Cognitive Load Detected</h3>
-            <p class="assist-sub">AuraGen Friction Engine detected hesitation or cognitive friction in your workflow.</p>
+            <h3 id="assistTitle">Switch to Guided Wizard?</h3>
+            <p class="assist-sub">AuraGen noticed hesitation or repeated interactions in the full form.</p>
           </div>
         </div>
         <div class="assist-details">
           <div class="assist-metric-pill">
-            <span class="pill-label">Detected Trigger:</span>
-            <strong id="assistReason">Hesitation pause (3s)</strong>
+            <span class="pill-label">Trigger:</span>
+            <strong id="assistReason">Hesitation pause</strong>
           </div>
           <div class="assist-metric-pill">
-            <span class="pill-label">Cognitive Friction:</span>
+            <span class="pill-label">Friction Score:</span>
             <strong id="assistScore" class="score-high">85 / 100</strong>
           </div>
         </div>
         <p class="assist-desc">
-          Would you like AuraGen AI to transform this application into an <strong>adaptive, step-by-step guided wizard</strong> with real-time AI guidance for each field? All your entered data is preserved locally.
+          Switch to a focused 5-step guided flow generated by Gemini? All data you already entered stays locally in your browser.
         </p>
         <div class="assist-actions">
           <button type="button" class="btn-primary" id="btnAcceptSimplify">Yes, Simplify Form</button>
-          <button type="button" class="btn-ghost" id="btnDismissSimplify">No, Keep Standard Form</button>
+          <button type="button" class="btn-ghost" id="btnDismissSimplify">Keep Full Form</button>
         </div>
       </div>
     </div>
@@ -433,13 +926,13 @@
       <div class="confirm-modal">
         <div class="confirm-header">
           <div class="confirm-badge">✓</div>
-          <h3 id="confirmTitle">Proposal Submitted Successfully</h3>
-          <p>Underwriting preliminary assessment completed in real time.</p>
+          <h3 id="confirmTitle">AI Underwriting Complete</h3>
+          <p>Preliminary assessment generated from your proposal.</p>
         </div>
         <div class="confirm-grid" id="confirmSummary"></div>
         <div class="confirm-actions">
-          <button type="button" class="btn-primary" id="btnDownloadReceipt">Download Official Receipt (JSON)</button>
-          <button type="button" class="btn-ghost" id="btnCloseConfirm">Close &amp; Return</button>
+          <button type="button" class="btn-primary" id="btnDownloadReceipt">Download Receipt (JSON)</button>
+          <button type="button" class="btn-ghost" id="btnCloseConfirm">Close</button>
         </div>
       </div>
     </div>
@@ -455,166 +948,88 @@
     const allowedTags = new Set(["DIV", "FORM", "P", "H2", "H3", "LABEL", "INPUT", "SELECT", "OPTION", "BUTTON", "SPAN", "STRONG"]);
     const allowedAttrs = new Set(["class", "id", "type", "value", "placeholder", "for", "selected", "data-action"]);
     const editedFields = new WeakSet();
-    let moves = 0;
-    let interactions = 0;
-    let score = 0;
-    let lastActivityTime = Date.now();
-    let hasInteracted = false;
-    let isSimplified = false;
-    let isTransitioning = false;
-    let hesitationTriggered = false;
-    let currentStep = 0;
-    let submitTimes = [];
-    let ws = null;
-    let pendingTimer = null;
-    let lastMousePos = null;
-    let lastMouseTime = null;
-    let cursorVelocity = 0;
-    let clickErrors = 0;
-    let pendingWizardMarkup = null;
-    let pendingWizardReason = "";
-    let pendingWizardSource = "";
-    let isWaitingUserAcceptance = false;
-    let snoozeUntil = 0;
-    let lastSubmittedRecord = null;
-
-    // Collapsible developer controls
-    $("evalToggle").addEventListener("click", () => {
-      const body = $("evalBody");
-      body.hidden = !body.hidden;
-    });
-
-    const FIELD_GUIDES = {
-      policyType: {
-        guide: "Comprehensive medical coverage recommended for family hospitalization.",
-        example: "Health Insurance"
-      },
-      sumInsured: {
-        guide: "Recommended minimum is 10 lakhs for metro healthcare.",
-        example: "₹10,00,000"
-      },
-      tenure: {
-        guide: "Multi-year locking secures up to 10% premium discount.",
-        example: "3 Years"
-      },
-      startDate: {
-        guide: "Earliest effective coverage commencement date is today.",
-        example: "2026-12-01"
-      },
-      frequency: {
-        guide: "Annual payment waives installment administrative surcharge fees.",
-        example: "Annual"
-      },
-      fullName: {
-        guide: "Must match your official government identity proof exactly.",
-        example: "Aarav Sharma"
-      },
-      dob: {
-        guide: "Must be 18 years or older for policyholder eligibility.",
-        example: "1992-05-15"
-      },
-      gender: {
-        guide: "Required for actuarial life expectancy risk rating tables.",
-        example: "Male"
-      },
-      maritalStatus: {
-        guide: "Determines family floater policy addition privileges.",
-        example: "Married"
-      },
-      nationality: {
-        guide: "Country issuing your primary tax citizenship residence.",
-        example: "Indian"
-      },
-      tobacco: {
-        guide: "Crucial for claim clearance; non-smokers get lower rates.",
-        example: "No"
-      },
-      occupation: {
-        guide: "Hazard classification for professional underwriting tiering.",
-        example: "Salaried Professional"
-      },
-      income: {
-        guide: "Required for financial underwriting limits above 10 lakhs.",
-        example: "₹10L – ₹25L"
-      },
-      employer: {
-        guide: "Current organization or write 'Self-Employed' if business owner.",
-        example: "Infosys Ltd"
-      },
-      medical: {
-        guide: "Declare chronic conditions; write 'None' if no history.",
-        example: "None"
-      },
-      email: {
-        guide: "Policy certificates and tax deduction receipts delivered here.",
-        example: "name@example.com"
-      },
-      phone: {
-        guide: "Used for instant claim authorization OTP alerts.",
-        example: "9876543210"
-      },
-      address: {
-        guide: "Permanent residence where formal notices are delivered.",
-        example: "Flat 402, Green Meadows"
-      },
-      cityState: {
-        guide: "Determines medical zone and network hospital reimbursement.",
-        example: "Bengaluru, Karnataka"
-      },
-      pincode: {
-        guide: "6-digit postal code of your residential location.",
-        example: "560001"
-      },
-      idType: {
-        guide: "PAN is mandatory for annual premium exceeding ₹50,000.",
-        example: "PAN Card"
-      },
-      idNumber: {
-        guide: "10-character alphanumeric PAN printed on your card.",
-        example: "ABCDE1234F"
-      },
-      nomineeName: {
-        guide: "Legal beneficiary designated to receive claim proceeds.",
-        example: "Priya Sharma"
-      },
-      nomineeRelation: {
-        guide: "Family relationship of nominee to the primary insured.",
-        example: "Spouse"
-      },
-      prevPolicy: {
-        guide: "Mention existing policy for No-Claim Bonus transfer.",
-        example: "POL-78912"
-      },
-      agree: {
-        guide: "Legal confirmation of complete and truthful disclosure.",
-        example: "Checked"
-      }
-    };
-
     const clientFieldCache = new Map();
+
+    let moves = 0, interactions = 0, score = 0;
+    let lastActivityTime = Date.now();
+    let hasInteracted = false, isSimplified = false, isTransitioning = false, hesitationTriggered = false;
+    let currentStep = 0, submitTimes = [], ws = null, pendingTimer = null;
+    let lastMousePos = null, lastMouseTime = null, cursorVelocity = 0, clickErrors = 0;
+    let pendingWizardMarkup = null, pendingWizardReason = "", pendingWizardSource = "";
+    let isWaitingUserAcceptance = false, snoozeUntil = 0, lastSubmittedRecord = null;
     let currentActiveFieldName = null;
 
-    function renderCopilotContent(copilotEl, guide, example) {
-      const body = copilotEl.querySelector(".copilot-body");
-      if (!body) return;
-      const g = guide || "Accurate information required for risk evaluation.";
-      const e = example || "Standard format";
-      body.innerHTML = `
+    $("evalToggle").addEventListener("click", () => {
+      $("evalBody").hidden = !$("evalBody").hidden;
+    });
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function syncSidebarGuide(fieldLabel, guide, example, sourceLabel) {
+      const sidebar = $("sidebarFieldGuide");
+      if (!sidebar) return;
+      if (!fieldLabel) {
+        sidebar.innerHTML = `
+          <div class="copilot-header">
+            <span class="copilot-badge">Gemini Field Guide</span>
+            <span class="copilot-tag">Ready</span>
+          </div>
+          <div class="sidebar-copilot-empty">Click or focus any field or dropdown to fetch live Gemini guidance.</div>
+        `;
+        return;
+      }
+      if (!guide) {
+        sidebar.innerHTML = `
+          <div class="copilot-header">
+            <span class="copilot-badge">Gemini Field Guide</span>
+            <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
+          </div>
+          <div class="copilot-loading"><span class="copilot-spinner"></span><span>Asking Gemini...</span></div>
+        `;
+        return;
+      }
+      sidebar.innerHTML = `
+        <div class="copilot-header">
+          <span class="copilot-badge">Gemini Field Guide${sourceLabel ? " · " + escapeHtml(sourceLabel) : ""}</span>
+          <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
+        </div>
         <div class="copilot-row">
           <span class="copilot-badge-tip">TIP</span>
-          <span class="copilot-text">${g}</span>
+          <span class="copilot-text">${escapeHtml(guide)}</span>
         </div>
         <div class="copilot-row example">
           <span class="copilot-badge-example">EXAMPLE</span>
-          <span class="copilot-example-val">${e}</span>
+          <span class="copilot-example-val">${escapeHtml(example || "Standard value")}</span>
         </div>
       `;
+    }
+
+    function renderCopilotContent(copilotEl, fieldLabel, guide, example, sourceLabel) {
+      const body = copilotEl.querySelector(".copilot-body");
+      if (body) {
+        body.innerHTML = `
+          <div class="copilot-row">
+            <span class="copilot-badge-tip">TIP</span>
+            <span class="copilot-text">${escapeHtml(guide)}</span>
+          </div>
+          <div class="copilot-row example">
+            <span class="copilot-badge-example">EXAMPLE</span>
+            <span class="copilot-example-val">${escapeHtml(example || "Standard value")}</span>
+          </div>
+        `;
+      }
+      syncSidebarGuide(fieldLabel, guide, example, sourceLabel);
     }
 
     function activateFieldCopilot(control, fieldName, fieldLabel) {
       if (!control) return;
       if (currentActiveFieldName === fieldName && document.getElementById(`copilot-${fieldName}`)) {
-        return; // Avoid duplicate triggers from focus + click
+        return;
       }
       currentActiveFieldName = fieldName;
       document.querySelectorAll(".active-field-copilot").forEach(el => el.remove());
@@ -625,41 +1040,39 @@
       const copilot = document.createElement("div");
       copilot.className = "active-field-copilot";
       copilot.id = `copilot-${fieldName}`;
+      copilot.dataset.label = fieldLabel;
       copilot.innerHTML = `
         <div class="copilot-header">
-          <span class="copilot-badge">✨ Gemini AI Field Guide</span>
-          <span class="copilot-tag">${fieldLabel}</span>
+          <span class="copilot-badge">Gemini AI Guide</span>
+          <span class="copilot-tag">${escapeHtml(fieldLabel)}</span>
         </div>
         <div class="copilot-body">
           <div class="copilot-loading">
             <span class="copilot-spinner"></span>
-            <span>Synthesizing guidance &amp; example...</span>
+            <span>Fetching guidance...</span>
           </div>
         </div>
       `;
       parent.append(copilot);
+      syncSidebarGuide(fieldLabel, null, null, null);
 
       if (clientFieldCache.has(fieldName)) {
         const cached = clientFieldCache.get(fieldName);
-        renderCopilotContent(copilot, cached.guide || cached.what, cached.example || cached.how);
-        log(`Field guidance displayed for '${fieldLabel}' (Cached).`);
+        renderCopilotContent(copilot, fieldLabel, cached.guide, cached.example, "Cached");
         return;
       }
 
+      const applyFallback = () => {
+        if (!clientFieldCache.has(fieldName) && currentActiveFieldName === fieldName) {
+          const fallback = { guide: `Provide accurate details for ${fieldLabel}.`, example: "Standard entry" };
+          clientFieldCache.set(fieldName, fallback);
+          renderCopilotContent(copilot, fieldLabel, fallback.guide, fallback.example, "Offline");
+        }
+      };
+
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: "FIELD_GUIDANCE_REQUEST",
-          fieldName: fieldName,
-          fieldLabel: fieldLabel
-        }));
-        log(`Requested real-time Gemini guidance for '${fieldLabel}'...`);
-        setTimeout(() => {
-          if (!clientFieldCache.has(fieldName) && currentActiveFieldName === fieldName) {
-            const fallback = FIELD_GUIDES[fieldName] || { guide: `Details for ${fieldLabel}.`, example: `Standard format` };
-            clientFieldCache.set(fieldName, fallback);
-            renderCopilotContent(copilot, fallback.guide, fallback.example);
-          }
-        }, 4000);
+        ws.send(JSON.stringify({ type: "FIELD_GUIDANCE_REQUEST", fieldName, fieldLabel }));
+        setTimeout(applyFallback, 5500);
       } else {
         fetch(`/api/field-guidance?name=${encodeURIComponent(fieldName)}&label=${encodeURIComponent(fieldLabel)}`)
           .then(res => res.json())
@@ -667,20 +1080,14 @@
             if (data.status === "ok") {
               const guide = data.guide || data.what;
               const example = data.example || data.how;
-              clientFieldCache.set(fieldName, { guide, example, what: guide, how: example });
+              clientFieldCache.set(fieldName, { guide, example });
               if (currentActiveFieldName === fieldName) {
-                renderCopilotContent(copilot, guide, example);
-                log(`Gemini generated guidance for '${fieldLabel}' (${data.source || 'LLM'}, ${data.latencyMs || 0}ms).`);
+                renderCopilotContent(copilot, fieldLabel, guide, example, data.source);
+                log(`Gemini guidance ready for '${fieldLabel}' (${data.source}, ${data.latencyMs}ms).`);
               }
             }
           })
-          .catch(() => {
-            const fallback = FIELD_GUIDES[fieldName] || { guide: `Details for ${fieldLabel}.`, example: `Standard format` };
-            clientFieldCache.set(fieldName, fallback);
-            if (currentActiveFieldName === fieldName) {
-              renderCopilotContent(copilot, fallback.guide, fallback.example);
-            }
-          });
+          .catch(applyFallback);
       }
     }
 
@@ -698,7 +1105,7 @@
     }
 
     function createBackupShell() {
-      return '<div class="wizard-box"><form id="wizardForm"><div id="wizardFields"></div><div id="wizardProgress"></div><div id="wizardStatus"></div><div class="wizard-actions"><button type="button" class="btn-ghost" data-action="previous">Previous</button><button type="button" class="btn-primary" data-action="next">Next section</button><button type="button" class="btn-success" data-action="confirm">Confirm &amp; Finish</button><button type="button" class="btn-ghost" data-action="restore">Go Back to Full Form</button></div></form></div>';
+      return '<div class="wizard-box"><form id="wizardForm"><div id="wizardFields"></div><div id="wizardProgress"></div><div id="wizardStatus"></div><div class="wizard-actions"><button type="button" class="btn-ghost" data-action="previous">Previous</button><button type="button" class="btn-primary" data-action="next">Next section</button><button type="button" class="btn-success" data-action="confirm">Confirm &amp; Finish</button><button type="button" class="btn-ghost" data-action="restore">Back to Full Form</button></div></form></div>';
     }
 
     function validateAndGetWizard(markup) {
@@ -706,31 +1113,28 @@
       const parsed = new DOMParser().parseFromString(markup, "text/html");
       const roots = Array.from(parsed.body.children);
       if (roots.length !== 1 || roots[0].tagName !== "DIV" || roots[0].className !== "wizard-box") return null;
-      const ids = new Set();
-      const actions = new Map();
+      const ids = new Set(), actions = new Map();
       let formCount = 0;
-      for (const element of roots[0].querySelectorAll("*")) {
-        if (!allowedTags.has(element.tagName)) return null;
-        if (["INPUT", "SELECT", "OPTION"].includes(element.tagName)) return null;
-        for (const attribute of element.attributes) {
-          if (!allowedAttrs.has(attribute.name.toLowerCase())) return null;
-          if (/javascript:|data:/i.test(attribute.value)) return null;
+      for (const el of roots[0].querySelectorAll("*")) {
+        if (!allowedTags.has(el.tagName) || ["INPUT", "SELECT", "OPTION"].includes(el.tagName)) return null;
+        for (const attr of el.attributes) {
+          if (!allowedAttrs.has(attr.name.toLowerCase()) || /javascript:|data:/i.test(attr.value)) return null;
         }
-        if (element.id) {
-          if (ids.has(element.id)) return null;
-          ids.add(element.id);
+        if (el.id) {
+          if (ids.has(el.id)) return null;
+          ids.add(el.id);
         }
-        if (element.tagName === "FORM") formCount++;
-        if (element.tagName === "BUTTON") {
-          if (element.type !== "button" || !["previous", "next", "confirm", "restore"].includes(element.dataset.action)) return null;
-          actions.set(element.dataset.action, (actions.get(element.dataset.action) || 0) + 1);
+        if (el.tagName === "FORM") formCount++;
+        if (el.tagName === "BUTTON") {
+          if (el.type !== "button" || !["previous", "next", "confirm", "restore"].includes(el.dataset.action)) return null;
+          actions.set(el.dataset.action, (actions.get(el.dataset.action) || 0) + 1);
         }
       }
       if (!["wizardForm", "wizardFields", "wizardProgress", "wizardStatus"].every(id => ids.has(id))) return null;
-      if (formCount !== 1 || actions.size !== 4 || Array.from(actions.values()).some(count => count !== 1)) return null;
+      if (formCount !== 1 || actions.size !== 4 || Array.from(actions.values()).some(c => c !== 1)) return null;
       const wizardForm = roots[0].querySelector("form#wizardForm");
       if (!wizardForm || !["wizardFields", "wizardProgress", "wizardStatus"].every(id => wizardForm.contains(roots[0].querySelector(`#${id}`)))) return null;
-      if (Array.from(roots[0].querySelectorAll("button")).some(button => !wizardForm.contains(button))) return null;
+      if (Array.from(roots[0].querySelectorAll("button")).some(btn => !wizardForm.contains(btn))) return null;
       return document.importNode(roots[0], true);
     }
 
@@ -741,25 +1145,19 @@
         return;
       }
       const fadeOut = card.animate(
-        [{ opacity: 1, transform: "translateY(0)" }, { opacity: 0.35, transform: "translateY(5px)" }],
-        { duration: 130, easing: "ease-in", fill: "forwards" }
+        [{ opacity: 1, transform: "translateY(0)" }, { opacity: 0.35, transform: "translateY(4px)" }],
+        { duration: 120, easing: "ease-in", fill: "forwards" }
       );
       fadeOut.onfinish = () => {
         fadeOut.cancel();
         callback();
-        card.animate(
-          [{ opacity: 0.35, transform: "translateY(5px)" }, { opacity: 1, transform: "translateY(0)" }],
-          { duration: 220, easing: "ease-out" }
-        );
+        card.animate([{ opacity: 0.35, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 200, easing: "ease-out" });
       };
     }
 
     function applyValue(control, value) {
-      if (control.type === "checkbox") {
-        control.checked = Boolean(value);
-      } else {
-        control.value = value == null ? "" : String(value);
-      }
+      if (control.type === "checkbox") control.checked = Boolean(value);
+      else control.value = value == null ? "" : String(value);
     }
 
     function buildWizardSteps(root) {
@@ -773,30 +1171,26 @@
           const originalId = control.id;
           const newId = `wizard-${originalId}`;
           const name = control.name || control.id;
-          const original = Array.from(form.elements).find(element => element.name === name);
+          const original = Array.from(form.elements).find(el => el.name === name);
           control.id = newId;
           control.dataset.field = name;
-          if (original) {
-            applyValue(control, original.type === "checkbox" ? original.checked : original.value);
-          }
+          if (original) applyValue(control, original.type === "checkbox" ? original.checked : original.value);
           const label = Array.from(step.querySelectorAll("label")).find(item => item.htmlFor === originalId);
           if (label) label.htmlFor = newId;
 
-          // Wire up click and focus to activate Gemini LLM Field Guidance for this specific field only!
-          const onFieldActivate = () => {
-            const fieldLabel = label ? label.textContent.replace('*', '').trim() : name;
+          const onActivate = () => {
+            const fieldLabel = label ? label.textContent.replace("*", "").trim() : name;
             activateFieldCopilot(control, name, fieldLabel);
           };
-          control.addEventListener("focus", onFieldActivate);
-          control.addEventListener("click", onFieldActivate);
+          control.addEventListener("focus", onActivate);
+          control.addEventListener("click", onActivate);
+          if (control.tagName === "SELECT") control.addEventListener("change", onActivate);
         }
         const consentControl = step.querySelector('input[type="checkbox"]');
         if (consentControl) {
-          const onConsentActivate = () => {
-            activateFieldCopilot(consentControl, "agree", "Declaration Consent");
-          };
-          consentControl.addEventListener("focus", onConsentActivate);
-          consentControl.addEventListener("click", onConsentActivate);
+          const onConsent = () => activateFieldCopilot(consentControl, "agree", "Declaration Consent");
+          consentControl.addEventListener("focus", onConsent);
+          consentControl.addEventListener("click", onConsent);
         }
         host.append(step);
         return step;
@@ -812,10 +1206,11 @@
       const steps = root._wizardSteps;
       if (!steps || !steps.length) return;
       currentStep = Math.max(0, Math.min(steps.length - 1, index));
-      steps.forEach((step, stepIndex) => { step.hidden = stepIndex !== currentStep; });
+      steps.forEach((step, idx) => { step.hidden = idx !== currentStep; });
       root.querySelector('[data-action="previous"]').hidden = currentStep === 0;
       root.querySelector('[data-action="next"]').hidden = currentStep === steps.length - 1;
       root.querySelector('[data-action="confirm"]').hidden = currentStep !== steps.length - 1;
+
       const progress = root.querySelector("#wizardProgress");
       progress.textContent = `Section ${currentStep + 1} of ${steps.length}`;
       const track = document.createElement("div");
@@ -826,14 +1221,12 @@
       track.append(fill);
       progress.append(track);
 
-      // Automatically activate dynamic guidance for the first field of the step
       const firstControl = steps[currentStep].querySelector("input,select");
       if (firstControl) {
         const name = firstControl.dataset.field || firstControl.name || firstControl.id;
-        const originalId = firstControl.id.replace(/^wizard-/, '');
+        const originalId = firstControl.id.replace(/^wizard-/, "");
         const label = steps[currentStep].querySelector(`label[for="${firstControl.id}"]`) || steps[currentStep].querySelector(`label[for="${originalId}"]`);
-        const fieldLabel = label ? label.textContent.replace('*', '').trim() : name;
-        activateFieldCopilot(firstControl, name, fieldLabel);
+        activateFieldCopilot(firstControl, name, label ? label.textContent.replace("*", "").trim() : name);
       }
     }
 
@@ -841,94 +1234,83 @@
       const status = $("simplifiedView").querySelector("#wizardStatus");
       if (status) status.textContent = message;
     }
+
     function renderSimplified(markup, reason, source) {
       if (isSimplified) return;
       const generatedWizard = validateAndGetWizard(markup);
       const wizard = generatedWizard || validateAndGetWizard(createBackupShell());
       if (!wizard) {
         isTransitioning = false;
-        log("A safe wizard shell could not be rendered; the full form remains available.");
         return;
       }
       const usedGemini = Boolean(generatedWizard && ["GEMINI_STREAM", "CACHE_HIT"].includes(source));
-
-      // Remove default unstyled h2 or p inside the wizard to prevent duplicate headers
       const oldH2 = wizard.querySelector("h2");
-      if (oldH2) oldH2.remove();
       const oldP = wizard.querySelector("p");
+      const titleText = oldH2 ? oldH2.textContent.trim() : "Guided Proposal";
+      const captionText = (oldP && oldP.parentElement === wizard) ? oldP.textContent.trim() : "Step-by-step help. Your entered details stay in this browser.";
+      if (oldH2) oldH2.remove();
       if (oldP && oldP.parentElement === wizard) oldP.remove();
 
-      // Clean, trustworthy Guided Proposal banner
-      const guideBanner = document.createElement("div");
-      guideBanner.className = "guided-banner";
-      guideBanner.innerHTML = `
+      const banner = document.createElement("div");
+      banner.className = "guided-banner";
+      banner.innerHTML = `
         <div class="guided-banner-top">
-          <div class="guided-banner-heading">
-            <span class="guided-shield-icon">🛡️</span>
-            <strong class="guided-title">Guided Proposal</strong>
-          </div>
-          <span class="guided-trust-badge">100% Private · Zero-AI Storage</span>
+          <strong class="guided-title">${escapeHtml(titleText)}</strong>
+          <span class="guided-trust-badge">${usedGemini ? "Gemini Guided Shell" : "Offline Safe Shell"} · Zero-AI PII</span>
         </div>
-        <p class="guided-caption">Step-by-step help. Your details stay in this browser—never sent to AI.</p>
+        <p class="guided-caption">${escapeHtml(captionText)}</p>
       `;
+      wizard.prepend(banner);
 
-      wizard.prepend(guideBanner);
       isTransitioning = true;
       morph(() => {
         buildWizardSteps(wizard);
         $("simplifiedView").replaceChildren(wizard);
         $("complexView").hidden = true;
         $("simplifiedView").hidden = false;
-        $("modeBadge").textContent = "VIEW: GUIDED WIZARD";
+        $("modeBadge").textContent = "Guided Wizard";
         $("modeBadge").className = "pill mode-simple";
         $("toast").hidden = true;
         isSimplified = true;
         isTransitioning = false;
       });
-      log(`Guided proposal initialized (${usedGemini ? source : "SAFE_FALLBACK"}). All field entries preserved locally.`);
+      log(`Switched to Guided Wizard (${reason} · ${usedGemini ? source : "SAFE_FALLBACK"}).`);
     }
 
     function syncWizardToForm() {
+      if (!isSimplified) return;
       const root = $("simplifiedView");
-      if (!root.querySelector("#wizardFields")) return;
       for (const control of root.querySelectorAll("[data-field]")) {
-        const original = Array.from(form.elements).find(element => element.name === control.dataset.field);
-        if (original) applyValue(original, control.type === "checkbox" ? control.checked : control.value);
+        const target = Array.from(form.elements).find(el => el.name === control.dataset.field);
+        if (target) applyValue(target, control.type === "checkbox" ? control.checked : control.value);
       }
     }
 
     function restoreFullForm() {
       if (!isSimplified || isTransitioning) return;
       document.querySelectorAll(".active-field-copilot").forEach(el => el.remove());
+      syncSidebarGuide(null);
       currentActiveFieldName = null;
       syncWizardToForm();
       isTransitioning = true;
       morph(() => {
         $("simplifiedView").hidden = true;
         $("complexView").hidden = false;
-        $("modeBadge").textContent = "VIEW: STANDARD PORTAL";
+        $("modeBadge").textContent = "Standard Portal";
         $("modeBadge").className = "pill mode-full";
         $("toast").hidden = true;
         isSimplified = false;
         isTransitioning = false;
         resetMetrics();
       });
-      log("Returned to full portal view with wizard edits synchronized locally.");
+      log("Returned to Standard Portal.");
     }
 
     function resetMetrics() {
-      moves = 0;
-      interactions = 0;
-      submitTimes = [];
-      hasInteracted = false;
-      hesitationTriggered = false;
-      lastActivityTime = Date.now();
-      lastMousePos = null;
-      lastMouseTime = null;
-      cursorVelocity = 0;
-      clickErrors = 0;
-      pendingWizardMarkup = null;
-      isWaitingUserAcceptance = false;
+      moves = 0; interactions = 0; submitTimes = [];
+      hasInteracted = false; hesitationTriggered = false;
+      lastActivityTime = Date.now(); lastMousePos = null; lastMouseTime = null;
+      cursorVelocity = 0; clickErrors = 0; pendingWizardMarkup = null; isWaitingUserAcceptance = false;
       if ($("assistModal")) $("assistModal").hidden = true;
       $("mMoves").textContent = "0 px/s";
       $("mClicks").textContent = "0";
@@ -944,20 +1326,13 @@
     function triggerFriction(type, reason) {
       if (isSimplified || isTransitioning || Date.now() < snoozeUntil || isWaitingUserAcceptance) return;
       const usePopup = $("chkUsePopup") ? $("chkUsePopup").checked : true;
-      const payload = {
-        events: [{ type }],
-        cognitiveScore: score,
-        domContext: { formId: "insurance-proposal-v1" }
-      };
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
-          ws.send(JSON.stringify(payload));
-          log(`Sent ${type} telemetry to Gemini LLM pipeline. No field values were sent.`);
-        } catch (error) {
-          log(`WebSocket send failed; fallback wizard ready (${error.message}).`);
+          ws.send(JSON.stringify({ events: [{ type }], cognitiveScore: score, domContext: { formId: "insurance-proposal-v1" } }));
+          log(`Sent ${type} signal to Gemini UI generator.`);
+        } catch (err) {
+          log(`WebSocket send failed (${err.message}).`);
         }
-      } else {
-        log("Backend unavailable; using local wizard fallback.");
       }
 
       if (usePopup) {
@@ -966,7 +1341,6 @@
         $("assistReason").textContent = reason;
         $("assistScore").textContent = `${score} / 100`;
         $("assistModal").hidden = false;
-        log(`Cognitive friction detected (${reason}). Prompting user via popup to simplify form.`);
       } else {
         isTransitioning = true;
         pendingTimer = setTimeout(() => {
@@ -983,60 +1357,51 @@
       hesitationTriggered = false;
       $("mClicks").textContent = String(interactions);
       updateCognitiveScore();
-      log(`${description} (${interactions} form interactions).`);
+      log(`${description} (${interactions} interactions).`);
       if (interactions > 3) {
         setScore(85);
-        triggerFriction("rage_click", `More than three proposal-form interactions (${interactions})`);
+        triggerFriction("rage_click", `Repeated form interactions (${interactions})`);
       }
     }
 
     async function submitProposalData() {
       syncWizardToForm();
       const payload = {};
-      for (const element of form.elements) {
-        if (!element.name) continue;
-        payload[element.name] = element.type === "checkbox" ? element.checked : element.value;
+      for (const el of form.elements) {
+        if (!el.name) continue;
+        payload[el.name] = el.type === "checkbox" ? el.checked : el.value;
       }
-      log("Transmitting proposal to Underwriting Engine (/api/proposals/submit)...");
+      log("Running Gemini AI underwriting assessment (/api/proposals/submit)...");
       try {
-        const response = await fetch("/api/proposals/submit", {
+        const res = await fetch("/api/proposals/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const result = await response.json();
+        const result = await res.json();
         if (result.status === "success" && result.record) {
           lastSubmittedRecord = result.record;
           showConfirmationModal(result.record);
-          log(`Proposal ${result.record.applicationId} approved. Underwriting tier: ${result.record.underwriting.riskTier}.`);
+          log(`Proposal ${result.record.applicationId} assessed by ${result.record.underwriting.assessedBy || "AI"}.`);
         } else {
           showToast("Proposal processed locally.");
         }
-      } catch (error) {
-        log(`Backend submission note: ${error.message}. Form validated locally.`);
+      } catch (err) {
+        log(`Submission note: ${err.message}`);
         showToast("Proposal verified locally.");
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
     function showConfirmationModal(record) {
-      const summary = $("confirmSummary");
-      summary.innerHTML = `
+      const u = record.underwriting;
+      $("confirmSummary").innerHTML = `
         <div class="confirm-item"><small>Application ID</small><strong>${escapeHtml(record.applicationId)}</strong></div>
-        <div class="confirm-item"><small>Applicant Name</small><strong>${escapeHtml(record.applicant.fullName)}</strong></div>
-        <div class="confirm-item"><small>Plan & Coverage</small><strong>${escapeHtml(record.coverage.policyType)} (${escapeHtml(record.coverage.sumInsured)})</strong></div>
-        <div class="confirm-item"><small>Tenure & Billing</small><strong>${escapeHtml(record.coverage.tenure)} · ${escapeHtml(record.coverage.frequency)}</strong></div>
-        <div class="confirm-item"><small>Risk Tier Assessment</small><strong style="color:#059669;">${escapeHtml(record.underwriting.riskTier)}</strong></div>
-        <div class="confirm-item"><small>Total Payable (incl. GST)</small><strong style="color:#2563eb;font-size:16px;">₹${record.underwriting.totalPayable.toLocaleString()}</strong></div>
+        <div class="confirm-item"><small>Applicant</small><strong>${escapeHtml(record.applicant.fullName)}</strong></div>
+        <div class="confirm-item"><small>Plan &amp; Sum Insured</small><strong>${escapeHtml(record.coverage.policyType)} (${escapeHtml(record.coverage.sumInsured)})</strong></div>
+        <div class="confirm-item"><small>Tenure &amp; Billing</small><strong>${escapeHtml(record.coverage.tenure)} · ${escapeHtml(record.coverage.frequency)}</strong></div>
+        <div class="confirm-item"><small>Risk Tier (${escapeHtml(u.assessedBy || "AI")})</small><strong style="color:var(--emerald);">${escapeHtml(u.riskTier)}</strong></div>
+        <div class="confirm-item"><small>Total Payable (incl. 18% GST)</small><strong style="color:var(--accent);font-size:16px;">₹${Number(u.totalPayable).toLocaleString()}</strong></div>
+        ${u.underwritingNote ? `<div class="confirm-item full"><small>AI Underwriting Note</small><strong>${escapeHtml(u.underwritingNote)}</strong></div>` : ""}
       `;
       $("confirmModal").hidden = false;
     }
@@ -1047,46 +1412,34 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${lastSubmittedRecord.applicationId}-Proposal-Receipt.json`;
+      a.download = `${lastSubmittedRecord.applicationId}-Receipt.json`;
       a.click();
       URL.revokeObjectURL(url);
     });
-
-    $("btnCloseConfirm").addEventListener("click", () => {
-      $("confirmModal").hidden = true;
-    });
-    $("confirmModal").addEventListener("click", event => {
-      if (event.target === $("confirmModal")) {
-        $("confirmModal").hidden = true;
-      }
-    });
-    $("assistModal").addEventListener("click", event => {
-      if (event.target === $("assistModal")) {
+    $("btnCloseConfirm").addEventListener("click", () => { $("confirmModal").hidden = true; });
+    $("confirmModal").addEventListener("click", e => { if (e.target === $("confirmModal")) $("confirmModal").hidden = true; });
+    $("assistModal").addEventListener("click", e => {
+      if (e.target === $("assistModal")) {
         $("assistModal").hidden = true;
         isWaitingUserAcceptance = false;
         isTransitioning = false;
       }
     });
 
-    function showToast(message) {
-      $("toast").textContent = message;
-      $("toast").hidden = false;
-    }
-
-    function firstInvalidControl(step) {
-      return Array.from(step.querySelectorAll("input,select")).find(control => !control.checkValidity());
-    }
+    function showToast(msg) { $("toast").textContent = msg; $("toast").hidden = false; }
+    function firstInvalidControl(step) { return Array.from(step.querySelectorAll("input,select")).find(c => !c.checkValidity()); }
 
     function confirmWizard(root) {
-      for (let index = 0; index < root._wizardSteps.length; index++) {
-        const invalid = firstInvalidControl(root._wizardSteps[index]);
+      for (let i = 0; i < root._wizardSteps.length; i++) {
+        const invalid = firstInvalidControl(root._wizardSteps[i]);
         if (invalid) {
-          showStep(root, index);
+          showStep(root, i);
           setWizardStatus("Complete the required fields in this section before submitting.");
           requestAnimationFrame(() => invalid.reportValidity());
           return;
         }
       }
+      setWizardStatus("");
       submitProposalData();
     }
 
@@ -1095,29 +1448,26 @@
       const host = window.location.host || "127.0.0.1:8765";
       ws = new WebSocket(`${protocol}//${host}/ws/telemetry`);
       ws.onopen = () => {
-        $("wsBadge").textContent = "ENGINE: ACTIVE";
+        $("wsBadge").textContent = "AI Engine: Live";
         $("wsBadge").className = "pill ws-on";
-        log("Connected to the AuraGen Telemetry Engine. Zero PII transmitted.");
+        log("Connected to AuraGen Gemini Engine.");
       };
       ws.onmessage = event => {
         let response;
-        try {
-          response = JSON.parse(event.data);
-        } catch {
-          if (isTransitioning) renderSimplified(createBackupShell(), "Invalid backend response", "CLIENT_SAFE_FALLBACK");
-          return;
-        }
+        try { response = JSON.parse(event.data); }
+        catch { if (isTransitioning) renderSimplified(createBackupShell(), "Invalid response", "CLIENT_SAFE_FALLBACK"); return; }
+
         if (response.type === "FIELD_GUIDANCE_RESPONSE") {
           const guide = response.guide || response.what;
           const example = response.example || response.how;
-          clientFieldCache.set(response.fieldName, { guide, example, what: guide, how: example });
+          clientFieldCache.set(response.fieldName, { guide, example });
           if (currentActiveFieldName === response.fieldName) {
-            const activeCopilot = document.getElementById(`copilot-${response.fieldName}`);
-            if (activeCopilot) {
-              renderCopilotContent(activeCopilot, guide, example);
-            }
+            const activeEl = document.getElementById(`copilot-${response.fieldName}`);
+            const label = activeEl ? activeEl.dataset.label : response.fieldName;
+            if (activeEl) renderCopilotContent(activeEl, label, guide, example, response.source);
+            else syncSidebarGuide(label, guide, example, response.source);
           }
-          log(`Gemini synthesized guidance for '${response.fieldName}' (${response.source}, ${response.latencyMs}ms).`);
+          log(`Gemini guidance for '${response.fieldName}' (${response.source}, ${response.latencyMs}ms).`);
           return;
         }
         if (response.type === "RENDER_UI") {
@@ -1125,27 +1475,35 @@
           pendingWizardMarkup = response.html;
           pendingWizardReason = response.reason || "Friction detected";
           pendingWizardSource = response.source || "BACKEND";
-
           if (isWaitingUserAcceptance) {
-            log(`LLM wizard shell ready (${pendingWizardSource}). Awaiting your confirmation in popup.`);
+            log(`Wizard shell ready (${pendingWizardSource}). Waiting for your confirmation.`);
           } else if (isTransitioning) {
-            renderSimplified(response.html, response.reason || "Friction detected", response.source || "BACKEND");
+            renderSimplified(response.html, pendingWizardReason, pendingWizardSource);
           }
         } else if (response.type === "ERROR") {
           clearTimeout(pendingTimer);
-          if (isTransitioning) {
-            renderSimplified(createBackupShell(), "Backend could not generate the wizard", "CLIENT_SAFE_FALLBACK");
-          }
+          if (isTransitioning) renderSimplified(createBackupShell(), "Backend error", "CLIENT_SAFE_FALLBACK");
         }
       };
-      ws.onerror = () => log("WebSocket connection error; local fallback is available.");
+      ws.onerror = () => log("WebSocket error; HTTP/fallback mode available.");
       ws.onclose = () => {
-        $("wsBadge").textContent = "MODE: LOCAL ENGINE";
+        $("wsBadge").textContent = "AI Engine: Offline";
         $("wsBadge").className = "pill ws-off";
-        if (isTransitioning) renderSimplified(createBackupShell(), "Backend disconnected", "CLIENT_SAFE_FALLBACK");
       };
-    } catch (error) {
-      log("WebSocket unavailable; running with local wizard renderer.");
+    } catch {
+      log("WebSocket unavailable.");
+    }
+
+    function showFieldCopilotFromControl(control) {
+      if (!control || isSimplified || isTransitioning) return;
+      const name = control.name || control.id;
+      if (!name) return;
+      if (control.type === "checkbox") {
+        activateFieldCopilot(control, "agree", "Declaration Consent");
+        return;
+      }
+      const label = formArea.querySelector(`label[for="${control.id}"]`);
+      activateFieldCopilot(control, name, label ? label.textContent.replace("*", "").trim() : name);
     }
 
     formArea.addEventListener("mousemove", event => {
@@ -1155,38 +1513,27 @@
       if (lastMousePos && lastMouseTime) {
         const dt = (now - lastMouseTime) / 1000;
         if (dt > 0.01) {
-          const dx = event.clientX - lastMousePos.x;
-          const dy = event.clientY - lastMousePos.y;
-          const dist = Math.hypot(dx, dy);
-          cursorVelocity = Math.round(dist / dt);
-          if (cursorVelocity > 1400) {
-            setScore(Math.max(score, 75));
-          }
+          cursorVelocity = Math.round(Math.hypot(event.clientX - lastMousePos.x, event.clientY - lastMousePos.y) / dt);
+          if (cursorVelocity > 1400) setScore(Math.max(score, 75));
         }
       }
       lastMousePos = { x: event.clientX, y: event.clientY };
       lastMouseTime = now;
       $("mMoves").textContent = `${cursorVelocity} px/s`;
       updateCognitiveScore();
-      if (hasInteracted) {
-        lastActivityTime = Date.now();
-        hesitationTriggered = false;
-      }
+      if (hasInteracted) { lastActivityTime = Date.now(); hesitationTriggered = false; }
     });
 
     formArea.addEventListener("click", event => {
       const control = event.target.closest("input,select,button");
       if (control) {
-        if (control.tagName !== "BUTTON") {
-          recordFormInteraction(`Focused ${control.name || control.id}`);
-        }
+        if (control.tagName !== "BUTTON") recordFormInteraction(`Focused ${control.name || control.id}`);
       } else {
         clickErrors++;
-        log(`Misclick detected on non-interactive zone (${clickErrors} errors).`);
         updateCognitiveScore();
         if (clickErrors >= 4) {
           setScore(80);
-          triggerFriction("rage_click", `Repeated click errors / misclicks (${clickErrors})`);
+          triggerFriction("rage_click", `Repeated misclicks (${clickErrors})`);
         }
       }
     });
@@ -1199,12 +1546,17 @@
       }
     });
     formArea.addEventListener("focusin", event => {
-      const control = event.target.closest("input");
-      if (control) editedFields.delete(control);
+      const input = event.target.closest("input");
+      if (input) editedFields.delete(input);
+      const control = event.target.closest("input,select");
+      if (control) showFieldCopilotFromControl(control);
     });
     formArea.addEventListener("change", event => {
       const control = event.target.closest("select");
-      if (control) recordFormInteraction(`Selected ${control.name}`);
+      if (control) {
+        recordFormInteraction(`Selected ${control.name}`);
+        showFieldCopilotFromControl(control);
+      }
     });
     formArea.addEventListener("keydown", () => {
       if (hasInteracted && !isSimplified && !isTransitioning) {
@@ -1213,31 +1565,26 @@
       }
     });
 
-    $("btnSubmit").addEventListener("click", (e) => {
+    $("btnSubmit").addEventListener("click", e => {
       if (isSimplified || isTransitioning) return;
       const now = Date.now();
-      submitTimes = submitTimes.filter(time => now - time < 2000);
+      submitTimes = submitTimes.filter(t => now - t < 2000);
       submitTimes.push(now);
       if (submitTimes.length >= 3) {
         e.preventDefault();
         setScore(90);
-        triggerFriction("rapid_submit", "Rapid repeated proposal submission");
+        triggerFriction("rapid_submit", "Rapid repeated submission");
       }
     });
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      submitProposalData();
-    });
+    form.addEventListener("submit", e => { e.preventDefault(); submitProposalData(); });
 
     $("simplifiedView").addEventListener("click", event => {
       const button = event.target.closest("button[data-action]");
       if (!button || !isSimplified || isTransitioning) return;
       const root = $("simplifiedView").firstElementChild;
-      if (button.dataset.action === "restore") {
-        restoreFullForm();
-      } else if (button.dataset.action === "previous") {
-        showStep(root, currentStep - 1);
-      } else if (button.dataset.action === "next") {
+      if (button.dataset.action === "restore") restoreFullForm();
+      else if (button.dataset.action === "previous") showStep(root, currentStep - 1);
+      else if (button.dataset.action === "next") {
         const invalid = firstInvalidControl(root._wizardSteps[currentStep]);
         if (invalid) {
           invalid.reportValidity();
@@ -1246,18 +1593,14 @@
         }
         setWizardStatus("");
         showStep(root, currentStep + 1);
-      } else if (button.dataset.action === "confirm") {
-        confirmWizard(root);
-      }
+      } else if (button.dataset.action === "confirm") confirmWizard(root);
     });
 
     $("btnAcceptSimplify").addEventListener("click", () => {
       $("assistModal").hidden = true;
       isWaitingUserAcceptance = false;
       isTransitioning = true;
-      log("User selected 'Yes, Simplify Form'. Morphing UI into LLM-generated wizard.");
-      const markup = pendingWizardMarkup || createBackupShell();
-      renderSimplified(markup, pendingWizardReason || "User accepted simplification", pendingWizardSource || "GEMINI_STREAM");
+      renderSimplified(pendingWizardMarkup || createBackupShell(), pendingWizardReason || "User accepted", pendingWizardSource || "GEMINI_STREAM");
     });
 
     $("btnDismissSimplify").addEventListener("click", () => {
@@ -1266,59 +1609,42 @@
       isTransitioning = false;
       snoozeUntil = Date.now() + 30000;
       resetMetrics();
-      log("User selected 'No, Keep Standard Form'. Retaining full proposal (prompts snoozed for 30s).");
+      log("Kept Standard Portal (prompts snoozed for 30s).");
     });
 
-    const onHesitate = () => {
+    $("btnHesitate").addEventListener("click", () => {
       if (isSimplified || isTransitioning) return;
       hasInteracted = true;
       hesitationTriggered = false;
       lastActivityTime = Date.now();
-      log("Confusion simulation armed: pause for three seconds.");
-    };
-    if ($("btnHesitate")) $("btnHesitate").addEventListener("click", onHesitate);
-    if ($("btnHesitation")) $("btnHesitation").addEventListener("click", onHesitate);
+      log("Confusion simulation armed: pause for 3 seconds.");
+    });
+
     $("btnRage").addEventListener("click", () => {
       if (isSimplified || isTransitioning) return;
       interactions = 4;
       $("mClicks").textContent = "4";
       setScore(90);
-      triggerFriction("rage_click", "Simulated repeated rage clicks (>3 clicks)");
+      triggerFriction("rage_click", "Simulated friction (>3 clicks)");
     });
+
     $("btnFillDemo").addEventListener("click", () => {
       const sample = {
-        policyType: "Health Insurance",
-        sumInsured: "₹10,00,000",
-        tenure: "3 Years",
-        startDate: new Date().toISOString().split("T")[0],
-        frequency: "Annual",
-        fullName: "Dr. Evelyn Reed",
-        dob: "1990-05-15",
-        gender: "Female",
-        maritalStatus: "Single",
-        nationality: "Indian",
-        tobacco: "No",
-        occupation: "Salaried Professional",
-        income: "₹5L – ₹15L",
-        employer: "AuraGen Systems Lab",
-        medical: "None",
-        email: "evelyn.reed@example.com",
-        phone: "+91 98765 43210",
-        address: "742 Evergreen Terrace, Sector 4",
-        cityState: "Dehradun, Uttarakhand",
-        pincode: "248001",
-        idType: "PAN Card",
-        idNumber: "ABCDE1234F",
-        nomineeName: "Arthur Reed",
-        nomineeRelation: "Parent",
-        prevPolicy: "POL-98234-OLD"
+        policyType: "Health Insurance", sumInsured: "₹10,00,000", tenure: "3 Years",
+        startDate: new Date().toISOString().split("T")[0], frequency: "Annual (Saves 8%)",
+        fullName: "Dr. Evelyn Reed", dob: "1990-05-15", gender: "Female", maritalStatus: "Single",
+        nationality: "Indian", tobacco: "No", occupation: "Salaried Professional",
+        income: "₹5L – ₹15L", employer: "AuraGen Systems Lab", medical: "None",
+        email: "evelyn.reed@example.com", phone: "+91 98765 43210",
+        address: "742 Evergreen Terrace, Sector 4", cityState: "Dehradun, Uttarakhand", pincode: "248001",
+        idType: "PAN Card", idNumber: "ABCDE1234F", nomineeName: "Arthur Reed",
+        nomineeRelation: "Parent", prevPolicy: "POL-98234-OLD"
       };
       for (const [key, value] of Object.entries(sample)) {
         const el = form.elements[key];
         if (el) applyValue(el, value);
       }
-      const agreeEl = form.elements["agree"];
-      if (agreeEl) agreeEl.checked = true;
+      if (form.elements["agree"]) form.elements["agree"].checked = true;
       if (isSimplified) {
         const root = $("simplifiedView");
         for (const [key, value] of Object.entries(sample)) {
@@ -1328,17 +1654,12 @@
         const rootAgree = root.querySelector('[data-field="agree"]');
         if (rootAgree) rootAgree.checked = true;
       }
-      log("Populated realistic application profile data.");
+      log("Demo profile populated.");
     });
 
     $("btnRestore").addEventListener("click", () => {
-      if (isSimplified) {
-        restoreFullForm();
-      } else {
-        resetMetrics();
-        $("toast").hidden = true;
-        log("Telemetry reset; full proposal form ready.");
-      }
+      if (isSimplified) restoreFullForm();
+      else { resetMetrics(); $("toast").hidden = true; log("Telemetry reset."); }
     });
 
     setInterval(() => {
@@ -1348,10 +1669,11 @@
       if (idleSeconds >= 3 && !hesitationTriggered) {
         hesitationTriggered = true;
         setScore(Math.max(score, 70));
-        triggerFriction("hesitation", "Three seconds of inactivity after form interaction");
+        triggerFriction("hesitation", "3 seconds of hesitation after interaction");
       }
     }, 250);
-    log("AuraGen Friction Engine initialized. 256-bit client-side privacy isolation active.");
+
+    log("AuraGen Portal initialized.");
   })();
   </script>
 </body>
