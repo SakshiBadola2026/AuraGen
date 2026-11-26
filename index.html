@@ -465,15 +465,9 @@
       background: #f8faff;
       animation: slideDown .16s ease-out;
     }
-    .active-field-copilot.above-select {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: calc(100% + 6px);
-      margin-top: 0;
-      z-index: 60;
-      background: #ffffff;
-      box-shadow: 0 12px 28px rgba(15, 23, 42, .16), 0 0 0 1px rgba(79, 70, 229, .18);
+    .sidebar-copilot.highlight {
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .18), 0 6px 18px rgba(79, 70, 229, .12);
+      transition: box-shadow .2s ease;
     }
     .sidebar-copilot {
       margin-bottom: 18px;
@@ -749,7 +743,7 @@
         <div class="logo" aria-hidden="true">AG</div>
         <div>
           <h1>AuraGen</h1>
-          <p>Guided insurance proposal application</p>
+          <p> Insurance proposal application</p>
         </div>
       </div>
       <div class="badges">
@@ -1064,9 +1058,11 @@
     let isWaitingUserAcceptance = false, snoozeUntil = 0, lastSubmittedRecord = null;
     let currentActiveFieldName = null;
 
-    $("evalToggle").addEventListener("click", () => {
-      $("evalBody").hidden = !$("evalBody").hidden;
-    });
+    if ($("evalToggle") && $("evalBody")) {
+      $("evalToggle").addEventListener("click", () => {
+        $("evalBody").hidden = !$("evalBody").hidden;
+      });
+    }
 
     if ($("sectionNav")) {
       $("sectionNav").addEventListener("click", e => {
@@ -1139,32 +1135,40 @@
       currentActiveFieldName = fieldName;
       document.querySelectorAll(".active-field-copilot").forEach(el => el.remove());
 
-      const parent = control.closest(".field") || control.closest(".consent-row") || control.parentElement;
-      if (!parent) return;
-
-      const copilot = document.createElement("div");
-      copilot.className = control.tagName === "SELECT"
-        ? "active-field-copilot above-select"
-        : "active-field-copilot";
-      copilot.id = `copilot-${fieldName}`;
-      copilot.dataset.label = fieldLabel;
-      copilot.innerHTML = `
-        <div class="copilot-header" style="margin-bottom:6px;padding-bottom:6px;">
-          <strong style="font-size:12px;color:var(--ink);">${escapeHtml(fieldLabel)}</strong>
-        </div>
-        <div class="copilot-body">
-          <div class="copilot-loading">
-            <span class="copilot-spinner"></span>
-            <span>Loading tip...</span>
-          </div>
-        </div>
-      `;
-      parent.append(copilot);
+      let copilot = null;
+      if (control.tagName !== "SELECT") {
+        const parent = control.closest(".field") || control.closest(".consent-row") || control.parentElement;
+        if (parent) {
+          copilot = document.createElement("div");
+          copilot.className = "active-field-copilot";
+          copilot.id = `copilot-${fieldName}`;
+          copilot.dataset.label = fieldLabel;
+          copilot.innerHTML = `
+            <div class="copilot-header" style="margin-bottom:6px;padding-bottom:6px;">
+              <strong style="font-size:12px;color:var(--ink);">${escapeHtml(fieldLabel)}</strong>
+            </div>
+            <div class="copilot-body">
+              <div class="copilot-loading">
+                <span class="copilot-spinner"></span>
+                <span>Loading tip...</span>
+              </div>
+            </div>
+          `;
+          parent.append(copilot);
+        }
+      }
+      const sidebarEl = $("sidebarFieldGuide");
+      if (sidebarEl) {
+        sidebarEl.dataset.label = fieldLabel;
+        sidebarEl.classList.add("highlight");
+        setTimeout(() => sidebarEl.classList.remove("highlight"), 700);
+      }
       syncSidebarGuide(fieldLabel, null, null);
 
       if (clientFieldCache.has(fieldName)) {
         const cached = clientFieldCache.get(fieldName);
-        renderCopilotContent(copilot, fieldLabel, cached.guide, cached.example, "Cached");
+        if (copilot) renderCopilotContent(copilot, fieldLabel, cached.guide, cached.example);
+        else syncSidebarGuide(fieldLabel, cached.guide, cached.example);
         return;
       }
 
@@ -1172,7 +1176,8 @@
         if (!clientFieldCache.has(fieldName) && currentActiveFieldName === fieldName) {
           const fallback = { guide: `Provide accurate details for ${fieldLabel}.`, example: "Standard entry" };
           clientFieldCache.set(fieldName, fallback);
-          renderCopilotContent(copilot, fieldLabel, fallback.guide, fallback.example, "Offline");
+          if (copilot) renderCopilotContent(copilot, fieldLabel, fallback.guide, fallback.example);
+          else syncSidebarGuide(fieldLabel, fallback.guide, fallback.example);
         }
       };
 
@@ -1188,7 +1193,8 @@
               const example = data.example || data.how;
               clientFieldCache.set(fieldName, { guide, example });
               if (currentActiveFieldName === fieldName) {
-                renderCopilotContent(copilot, fieldLabel, guide, example);
+                if (copilot) renderCopilotContent(copilot, fieldLabel, guide, example);
+                else syncSidebarGuide(fieldLabel, guide, example);
                 log(`Loaded guidance for ${fieldLabel}.`);
               }
             }
