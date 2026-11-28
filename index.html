@@ -559,6 +559,21 @@
 
     /* Guided Wizard */
     .wizard-box { width: 100%; animation: fadeIn .2s ease-out; }
+    .wizard-box > h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--ink); }
+    .wizard-box > p { margin: 0 0 14px; font-size: 13px; color: var(--ink-2); }
+    .wizard-callout {
+      margin-bottom: 16px;
+      padding: 13px 16px;
+      border: 1px solid #c7d2fe;
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #eef2ff 0%, #ffffff 70%);
+      font-size: 12.5px;
+      color: var(--ink-2);
+    }
+    .wizard-callout strong { display: block; color: var(--ink); margin-bottom: 5px; font-size: 13px; }
+    .wizard-checklist { margin: 6px 0 0; padding-left: 18px; }
+    .wizard-checklist li { margin-bottom: 3px; }
     .wizard-box .form-grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
     .wizard-box .form-grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
     .guided-banner {
@@ -1044,8 +1059,8 @@
     const form = $("proposalForm");
     const formArea = $("formArea");
     const sections = Array.from(formArea.querySelectorAll(".form-section"));
-    const allowedTags = new Set(["DIV", "FORM", "P", "H2", "H3", "LABEL", "INPUT", "SELECT", "OPTION", "BUTTON", "SPAN", "STRONG"]);
-    const allowedAttrs = new Set(["class", "id", "type", "value", "placeholder", "for", "selected", "data-action"]);
+    const allowedTags = new Set(["DIV", "FORM", "P", "H2", "H3", "LABEL", "INPUT", "SELECT", "OPTION", "BUTTON", "SPAN", "STRONG", "UL", "LI"]);
+    const allowedAttrs = new Set(["class", "id", "type", "value", "placeholder", "for", "selected", "data-action", "data-start-section"]);
     const editedFields = new WeakSet();
     const clientFieldCache = new Map();
 
@@ -1310,8 +1325,10 @@
       wizardForm.noValidate = true;
       root._wizardSteps = steps;
       root._wizardForm = wizardForm;
-      currentStep = 0;
-      showStep(root, 0);
+      const startName = wizardForm.dataset.startSection;
+      const startIndex = startName ? sections.findIndex(s => s.dataset.section === startName) : 0;
+      currentStep = startIndex >= 0 ? startIndex : 0;
+      showStep(root, currentStep);
     }
 
     function showStep(root, index) {
@@ -1355,24 +1372,19 @@
         isTransitioning = false;
         return;
       }
-      const usedGemini = Boolean(generatedWizard && ["GEMINI_STREAM", "CACHE_HIT"].includes(source));
-      const oldH2 = wizard.querySelector("h2");
-      const oldP = wizard.querySelector("p");
-      const titleText = oldH2 ? oldH2.textContent.trim() : "Guided Proposal";
-      const captionText = (oldP && oldP.parentElement === wizard) ? oldP.textContent.trim() : "Step-by-step help. Your entered details stay in this browser.";
-      if (oldH2) oldH2.remove();
-      if (oldP && oldP.parentElement === wizard) oldP.remove();
-
-      const banner = document.createElement("div");
-      banner.className = "guided-banner";
-      banner.innerHTML = `
-        <div class="guided-banner-top">
-          <strong class="guided-title">${escapeHtml(titleText)}</strong>
-          <span class="guided-trust-badge">Private Guided Mode</span>
-        </div>
-        <p class="guided-caption">${escapeHtml(captionText)}</p>
-      `;
-      wizard.prepend(banner);
+      // Preserve Gemini's generated headings/callouts; only add a default header if absent
+      if (!wizard.querySelector("h2")) {
+        const banner = document.createElement("div");
+        banner.className = "guided-banner";
+        banner.innerHTML = `
+          <div class="guided-banner-top">
+            <strong class="guided-title">Guided Proposal</strong>
+            <span class="guided-trust-badge">Private Guided Mode</span>
+          </div>
+          <p class="guided-caption">Step-by-step help. Your entered details stay in this browser.</p>
+        `;
+        wizard.prepend(banner);
+      }
 
       isTransitioning = true;
       morph(() => {
@@ -1435,12 +1447,29 @@
       setScore(Math.max(score, frictionLoad));
     }
 
+    function getNonPiiContext() {
+      const activeEl = document.activeElement;
+      const activeSection = activeEl?.closest?.(".form-section")?.dataset.section
+        || $("sectionNav")?.querySelector(".sec-pill.active")?.dataset.jump
+        || "policy";
+      const incompleteSections = sections
+        .filter(sec => Array.from(sec.querySelectorAll("input,select")).some(c => !c.checkValidity()))
+        .map(sec => sec.dataset.section);
+      return {
+        formId: "insurance-proposal-v1",
+        activeSection,
+        activeField: currentActiveFieldName || "",
+        incompleteSections,
+      };
+    }
+
     function triggerFriction(type, reason) {
       if (isSimplified || isTransitioning || Date.now() < snoozeUntil || isWaitingUserAcceptance) return;
       const usePopup = $("chkUsePopup") ? $("chkUsePopup").checked : true;
+      pendingWizardMarkup = null;
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
-          ws.send(JSON.stringify({ events: [{ type }], cognitiveScore: score, domContext: { formId: "insurance-proposal-v1" } }));
+          ws.send(JSON.stringify({ events: [{ type }], cognitiveScore: score, domContext: getNonPiiContext() }));
           log("Preparing guided step-by-step view.");
         } catch (err) {
           log(`Connection error (${err.message}).`);
@@ -1608,11 +1637,25 @@
             if (isWaitingUserAcceptance) {
               log("Guided step view ready.");
             } else if (isTransitioning) {
+              if ($("assistModal")) $("assistModal").hidden = true;
+              if ($("btnAcceptSimplify")) {
+                $("btnAcceptSimplify").disabled = false;
+                $("btnAcceptSimplify").textContent = "Use Guided Steps";
+              }
+              isTransitioning = false;
               renderSimplified(response.html, pendingWizardReason, pendingWizardSource);
             }
           } else if (response.type === "ERROR") {
             clearTimeout(pendingTimer);
-            if (isTransitioning) renderSimplified(createBackupShell(), "Fallback layout", "CLIENT_SAFE_FALLBACK");
+            if (isTransitioning) {
+              if ($("assistModal")) $("assistModal").hidden = true;
+              if ($("btnAcceptSimplify")) {
+                $("btnAcceptSimplify").disabled = false;
+                $("btnAcceptSimplify").textContent = "Use Guided Steps";
+              }
+              isTransitioning = false;
+              renderSimplified(createBackupShell(), "Fallback layout", "CLIENT_SAFE_FALLBACK");
+            }
           }
         };
         ws.onerror = () => {};
@@ -1741,10 +1784,25 @@
     });
 
     $("btnAcceptSimplify").addEventListener("click", () => {
-      $("assistModal").hidden = true;
+      const btn = $("btnAcceptSimplify");
+      if (pendingWizardMarkup || !ws || ws.readyState !== WebSocket.OPEN) {
+        $("assistModal").hidden = true;
+        isWaitingUserAcceptance = false;
+        isTransitioning = true;
+        renderSimplified(pendingWizardMarkup || createBackupShell(), pendingWizardReason || "User accepted", pendingWizardSource || "GEMINI_STREAM");
+        return;
+      }
+      // Wait briefly for Gemini's live response instead of immediately using static fallback
+      btn.disabled = true;
+      btn.textContent = "Preparing layout...";
       isWaitingUserAcceptance = false;
       isTransitioning = true;
-      renderSimplified(pendingWizardMarkup || createBackupShell(), pendingWizardReason || "User accepted", pendingWizardSource || "GEMINI_STREAM");
+      pendingTimer = setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "Use Guided Steps";
+        $("assistModal").hidden = true;
+        if (isTransitioning) renderSimplified(pendingWizardMarkup || createBackupShell(), pendingWizardReason || "User accepted", pendingWizardSource || "CLIENT_SAFE_FALLBACK");
+      }, 8000);
     });
 
     $("btnDismissSimplify").addEventListener("click", () => {

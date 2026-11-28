@@ -145,7 +145,7 @@ async def ask_gemini(
     if json_mode:
         config_args["response_mime_type"] = "application/json"
 
-    for _ in range(min(len(keys), 2)):
+    for _ in range(min(len(keys), 3)):
         try:
             client, _ = get_next_client()
             response = await asyncio.wait_for(
@@ -227,20 +227,25 @@ async def _generate_field_guidance(field_name: str, field_label: str) -> tuple[d
 # ==============================================================================
 # 4. AI-GENERATED WIZARD HTML & AST SECURITY CHECK
 # ==============================================================================
-SYSTEM_PROMPT = """You are AuraGen, a privacy-first UI generator for guided insurance proposal forms.
+SYSTEM_PROMPT = """You are AuraGen, an adaptive UI architect for privacy-first insurance proposal forms.
 
-Core Rules:
-- Output raw, valid HTML only. No markdown fences, no explanations, no extra text.
-- Keep copy ultra-short and calm, reassuring the user their details stay in the browser.
-- Output ONLY this exact structure, customizing only the <h2> and <p> text:
-<div class="wizard-box"><h2>Short calm title</h2><p>Short reassuring line.</p><form id="wizardForm"><div id="wizardFields"></div><div id="wizardProgress"></div><div id="wizardStatus"></div><div class="wizard-actions"><button type="button" class="btn-ghost" data-action="previous">Previous</button><button type="button" class="btn-primary" data-action="next">Next section</button><button type="button" class="btn-success" data-action="confirm">Confirm &amp; Finish</button><button type="button" class="btn-ghost" data-action="restore">Go Back to Full Form</button></div></form></div>"""
+Output compact, raw, valid HTML only (no markdown fences, no explanations, no extra whitespace).
+Adapt the wizard shell to the user's trigger and incomplete sections:
+- Root MUST be <div class="wizard-box">...</div>.
+- Include a tailored <h2> and short <p> explaining how this guided view helps with their situation.
+- Include a <div class="wizard-callout"> with a short <strong> heading and a <ul class="wizard-checklist"><li>...</li></ul> (2-3 concise items, no PII).
+- Must contain exactly one <form id="wizardForm" data-start-section="SECTION">, where SECTION is the best starting section from: policy, personal, employment, contact, kyc.
+- Inside <form>, include <div id="wizardFields"></div>, <div id="wizardProgress"></div>, <div id="wizardStatus"></div>, and exact action buttons:
+<div class="wizard-actions"><button type="button" class="btn-ghost" data-action="previous">Previous</button><button type="button" class="btn-primary" data-action="next">Next section</button><button type="button" class="btn-success" data-action="confirm">Confirm &amp; Finish</button><button type="button" class="btn-ghost" data-action="restore">Back to Full Form</button></div>
+- Never use <input>, <select>, <textarea>, <style>, <script>, comments, or onclick/javascript: URLs."""
 
 
 class HTMLSecurityParser(HTMLParser):
     """Validates AI-generated HTML to block scripts, unsafe attributes, or missing slots."""
 
-    ALLOWED_TAGS = {"div", "form", "p", "h2", "h3", "label", "button", "span", "strong"}
-    ALLOWED_ATTRS = {"class", "id", "type", "data-action"}
+    ALLOWED_TAGS = {"div", "form", "p", "h2", "h3", "label", "button", "span", "strong", "ul", "li"}
+    ALLOWED_ATTRS = {"class", "id", "type", "data-action", "data-start-section"}
+    VALID_SECTIONS = {"policy", "personal", "employment", "contact", "kyc"}
     REQUIRED_ACTIONS = {"previous", "next", "confirm", "restore"}
     REQUIRED_SLOTS = {"wizardFields", "wizardProgress", "wizardStatus"}
 
@@ -285,6 +290,9 @@ class HTMLSecurityParser(HTMLParser):
         if tag == "form":
             self.form_count += 1
             if attr_map.get("id") != "wizardForm":
+                self.safe = False
+            start_sec = attr_map.get("data-start-section")
+            if start_sec and start_sec not in self.VALID_SECTIONS:
                 self.safe = False
 
         if tag == "button":
@@ -345,14 +353,18 @@ def _fallback_html() -> str:
     )
 
 
-async def _generate_html(trigger: str, score: int, context: dict[str, str]) -> tuple[str, str]:
+async def _generate_html(trigger: str, score: int, context: dict[str, Any]) -> tuple[str, str]:
     raw_key = json.dumps(context, sort_keys=True, separators=(",", ":"))
     cache_key = hashlib.sha256(f"{trigger}|{raw_key}".encode()).hexdigest()
     if cache_key in UI_CACHE:
         return UI_CACHE[cache_key], "CACHE_HIT"
 
-    prompt = f"User experienced {trigger} with friction score {score}/100. Generate the adaptive wizard shell."
-    raw_html = await ask_gemini(prompt, system_instruction=SYSTEM_PROMPT, timeout=4.0)
+    prompt = (
+        f"Trigger: {trigger} (effort score {score}/100).\n"
+        f"Context (no PII): {json.dumps(context, ensure_ascii=False)}\n"
+        "Generate an adapted guided wizard shell tailored to this trigger and context."
+    )
+    raw_html = await ask_gemini(prompt, system_instruction=SYSTEM_PROMPT, timeout=8.0)
     if raw_html:
         markup = raw_html.removeprefix("```html").removeprefix("```").removesuffix("```").strip()
         if validate_html(markup):
@@ -562,8 +574,17 @@ async def telemetry_ws(ws: WebSocket) -> None:
                     continue
 
                 score = max(0, min(100, int(payload.get("cognitiveScore", 0))))
+                raw_ctx = payload.get("domContext")
+                safe_ctx: dict[str, Any] = {"formId": FORM_ID}
+                if isinstance(raw_ctx, dict):
+                    if isinstance(raw_ctx.get("activeSection"), str):
+                        safe_ctx["activeSection"] = raw_ctx["activeSection"][:30]
+                    if isinstance(raw_ctx.get("activeField"), str):
+                        safe_ctx["activeField"] = raw_ctx["activeField"][:60]
+                    if isinstance(raw_ctx.get("incompleteSections"), list):
+                        safe_ctx["incompleteSections"] = [str(s)[:30] for s in raw_ctx["incompleteSections"][:5]]
                 t0 = time.perf_counter()
-                markup, source = await _generate_html(trigger, score, {"formId": FORM_ID})
+                markup, source = await _generate_html(trigger, score, safe_ctx)
                 await ws.send_json({
                     "type": "RENDER_UI",
                     "html": markup,
